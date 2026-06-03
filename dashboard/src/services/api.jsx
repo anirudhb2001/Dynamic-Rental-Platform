@@ -101,7 +101,7 @@ export const getItemAvailability = async (startDatetime, endDatetime) => {
     );
 
     if (response.data && response.data["total items"]) {
-      return response.data["total items"];
+      return response.data;
     }
     throw new Error("Invalid API response");
   } catch (error) {

@@ -9,88 +9,106 @@ from datetime import datetime
         
    
 @frappe.whitelist(allow_guest=True)
-def get_item_availability(start_datetime, end_datetime):
-    items = frappe.get_all(
-        "Item",
-        filters={"custom_show_in_rental_screen": 1, "disabled": 0},
-        fields=["item_code", "item_name"],
-        order_by="item_name ASC"
-    )
-    item_availability = {item["item_code"] for item in items}
-
-    rental_entries = frappe.db.sql(
-        """
-        SELECT
-            rbe.name AS booking_entry_name,
-            rbe.status,
-            rbed.rental_item_id
-        FROM
-            `tabBooking Entry` AS rbe
-        JOIN
-            `tabBooking details Table` AS rbed
-        ON
-            rbe.name = rbed.parent
-        WHERE
-            rbe.status IN ('Reserved', 'Rented')
-            AND (
-                rbe.rental_from_date < %(end_datetime)s
-                AND rbe.actual_to_date > %(start_datetime)s
-            )
-        """,
-        {
-            "start_datetime": start_datetime,
-            "end_datetime": end_datetime,
-        },
-        as_dict=True
-    )
-
-    reserved = []
-    rented = []
-    for r in rental_entries:
-        if r.status == "Reserved":
-            reserved.append(r.rental_item_id)
-        else:
-            rented.append(r.rental_item_id)
-
-    reserved_or_rented_items = [entry["rental_item_id"] for entry in rental_entries]
-    available_items = list(set(item_availability) - set(reserved_or_rented_items))
-
-    total_items_status = []
-
-    # Add available items
-    for item in available_items:
-        total_items_status.append({"item_id": item, "status": "Available"})
-
-    # Add reserved items
-    for item in reserved:
-        total_items_status.append({"item_id": item, "status": "Reserved"})
-
-    # Add rented items
-    for item in rented:
-        total_items_status.append({"item_id": item, "status": "Rented"})
-
-    # Return the updated format
-    frappe.local.response['total items'] = total_items_status
-
-
+def get_item_availability(start_datetime=None, end_datetime=None):
+    from frappe.utils import now
     
-    # # Step 3: Create a dictionary to track item statuses
-    # item_status = {item["item_code"]: "Available" for item in items}
+    if not start_datetime:
+        start_datetime = now()
+    if not end_datetime:
+        end_datetime = now()
 
-    # # Update the status for items in rental entries
-    # for entry in rental_entries:
-    #     item_code = entry["item_code"]
-    #     status = entry["status"]
-    #     item_status[item_code] = status  # Override 'Available' with 'Reserved' or 'Rented'
+    # Fetch all rental assets that are active
+    assets = frappe.db.sql("""
+        SELECT name as item_id, custom_stock_qty as stock_qty, asset_status
+        FROM `tabRental Asset`
+        WHERE asset_status != 'Inactive'
+    """, as_dict=True)
 
-    # # Step 4: Create a final list of items with their status
-    # final_list = []
-    # for item in items:
-    #     item_code = item["item_code"]
-    #     final_list.append({
-    #         "item_code": item_code,
-    #         "item_name": item["item_name"],
-    #         "status": item_status[item_code]
-    #     })
-    # frappe.local.response['result']=final_list
+    # Calculate active bookings for each asset
+    # Active bookings exclude Draft, Cancelled, Completed, and Returned
+    active_bookings = frappe.db.sql("""
+        SELECT
+            asset AS item_id,
+            SUM(quantity) AS total_booked
+        FROM
+            `tabRental Booking`
+        WHERE
+            booking_status NOT IN ('Returned', 'Completed', 'Cancelled', 'Draft')
+            AND (
+                start_date < %(end_datetime)s
+                AND end_date > %(start_datetime)s
+            )
+        GROUP BY
+            asset
+    """, {
+        "start_datetime": start_datetime,
+        "end_datetime": end_datetime,
+    }, as_dict=True)
+
+    booked_map = {b.item_id: b.total_booked for b in active_bookings}
+    
+    total_items_status = []
+    
+    # KPIs
+    kpis = {
+        "total": 0,
+        "available": 0,
+        "unavailable": 0,
+        "reserved": 0,
+        "onRide": 0,
+        "maintenance": 0
+    }
+    
+    for asset in assets:
+        kpis["total"] += 1
+        
+        # Default to 1 if custom_stock_qty is not set or None
+        stock = float(asset.stock_qty or 1)
+        booked = float(booked_map.get(asset.item_id, 0))
+        available = max(0, stock - booked)
+        
+        # Determine dynamic status based on availability
+        if available > 0:
+            status = "Available"
+            kpis["available"] += 1
+        else:
+            status = "Unavailable"
+            kpis["unavailable"] += 1
+            
+        if asset.asset_status == "Maintenance":
+            kpis["maintenance"] += 1
+            
+        total_items_status.append({
+            "item_id": asset.item_id,
+            "stock_quantity": stock,
+            "booked_quantity": booked,
+            "available_quantity": available,
+            "status": status
+        })
+
+    # Additional KPI for specific booking statuses in the timeframe
+    status_counts = frappe.db.sql("""
+        SELECT booking_status, COUNT(name) as count
+        FROM `tabRental Booking`
+        WHERE
+            booking_status IN ('Reserved', 'Picked Up')
+            AND (
+                start_date < %(end_datetime)s
+                AND end_date > %(start_datetime)s
+            )
+        GROUP BY booking_status
+    """, {
+        "start_datetime": start_datetime,
+        "end_datetime": end_datetime,
+    }, as_dict=True)
+
+    for row in status_counts:
+        if row.booking_status == 'Reserved':
+            kpis["reserved"] = row.count
+        elif row.booking_status == 'Picked Up':
+            kpis["onRide"] = row.count
+
+    frappe.local.response['total items'] = total_items_status
+    frappe.local.response['kpis'] = kpis
+
 

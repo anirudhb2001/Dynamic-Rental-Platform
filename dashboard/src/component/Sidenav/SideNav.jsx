@@ -137,9 +137,9 @@ const SideNav = ({
       try {
         const response = await getCategories();
         const formattedData = response.map((category_data) => ({
-          id: category_data.name,
+          id: category_data.category_id,
           name: category_data.category_name,
-          item_count: 0,
+          item_count: category_data.item_count || 0,
         }));
         setCategories(formattedData);
       } catch (error) {
@@ -676,7 +676,7 @@ const SideNav = ({
 
           {activeTab === "rental" && (
             <div className="flex flex-col gap-5">
-              <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+              <section className="relative z-[60] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -781,7 +781,7 @@ const SideNav = ({
                 </button>
               )}
 
-              <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+              <section className="relative z-[50] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-white">
                     <LuCalendarClock className="h-5 w-5" />
@@ -933,7 +933,7 @@ const SideNav = ({
               </section>
 
                 {!forceAvailable && (
-                <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+                <section className="relative z-[40] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                   <div className="mb-3 flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <LuFilter className="h-5 w-5" />
@@ -943,7 +943,7 @@ const SideNav = ({
                         Category
                       </p>
                       <h3 className="text-sm font-black text-slate-950">
-                        {selectedCategory || "All bike categories"}
+                        {selectedCategory || "All categories"}
                       </h3>
                     </div>
                   </div>
@@ -1001,82 +1001,13 @@ const SideNav = ({
 
 
 
-              {!forceAvailable && (
-                <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                      <LuWarehouse className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Warehouse
-                      </p>
-                      <h3 className="text-sm font-black text-slate-950">
-                        {selectedWarehouse || "All warehouses"}
-                      </h3>
-                    </div>
-                  </div>
-                  <div className="relative z-[40]">
-                    <div
-                      className={`w-full px-4 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-700 text-sm cursor-pointer flex items-center justify-between hover:border-primary/30 hover:shadow-md transition-all duration-300 ${
-                        isUserWarehouse ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                      onClick={() => {
-                        if (!isUserWarehouse) {
-                          setIsWarehouseDropdownOpen(!isWarehouseDropdownOpen);
-                        }
-                      }}
-                    >
-                      <span>{selectedWarehouse || "Select a Warehouse"}</span>
-                      {selectedWarehouse && (
-                        <span
-                          className="ml-2 p-1 rounded-full bg-slate-200 hover:bg-slate-300 transition duration-200"
-                          onClick={clearWarehouseFilter}
-                        >
-                          <MdOutlineClear className="text-slate-500 w-4 h-4 cursor-pointer" />
-                        </span>
-                      )}
-                    </div>
-                    {isWarehouseDropdownOpen && (
-                      <div className="absolute w-full mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-soft border border-white/60 z-20 overflow-hidden">
-                        <input
-                          type="text"
-                          className="w-full px-4 py-3 border-b border-slate-100 bg-slate-50/50 text-sm text-slate-800 focus:outline-none focus:bg-white transition-colors"
-                          placeholder="Search for a warehouse..."
-                          value={warehouseSearchTerm}
-                          onChange={(e) =>
-                            setWarehouseSearchTerm(e.target.value)
-                          }
-                        />
-                        <ul className="max-h-40 overflow-y-auto">
-                          {filteredWarehouses.map((warehouse) => (
-                            <li
-                              key={warehouse.id}
-                              className="px-3 py-2 hover:bg-slate-100 cursor-pointer text-slate-700"
-                              onClick={() =>
-                                handleSelectWarehouse(warehouse.warehouse_name)
-                              }
-                            >
-                              {warehouse.warehouse_name}
-                            </li>
-                          ))}
-                          {filteredWarehouses.length === 0 && (
-                            <li className="px-3 py-2 text-gray-500">
-                              No warehouses found
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
+
 
               {!forceAvailable &&
                 pickupDate &&
                 returnDate &&
                 actualReturnDate && (
-                  <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+                  <section className="relative z-[30] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                     <div className="mb-3 flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
                         <LuCheckCircle2 className="h-5 w-5" />
@@ -1138,7 +1069,7 @@ const SideNav = ({
 
           {activeTab === "return" && (
             <div className="flex flex-col gap-5">
-              <section className="rounded-3xl border border-white/50 bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+              <section className="relative z-[20] rounded-3xl border border-white/50 bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                 <div className="flex items-start gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20">
                     <LuRotateCcw className="h-6 w-6" />
@@ -1174,7 +1105,7 @@ const SideNav = ({
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+              <section className="relative z-[60] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                 <div className="mb-3 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <LuUser className="h-5 w-5" />
@@ -1431,7 +1362,7 @@ const SideNav = ({
                 Clear Filters
               </button>
 
-              <section className="rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
+              <section className="relative z-[50] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                     <LuCalendarClock className="h-5 w-5" />

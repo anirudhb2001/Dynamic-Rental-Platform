@@ -28,7 +28,7 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Rental Item ID",
-   "options": "Item",
+   "options": "Rental Asset",
    "reqd": 1
   },
   {

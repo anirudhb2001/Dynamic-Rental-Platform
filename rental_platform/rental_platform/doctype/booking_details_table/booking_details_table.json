@@ -25,14 +25,14 @@
    "fieldname": "rental_item_id",
    "fieldtype": "Link",
    "label": "Rental Item ID",
-   "options": "Item"
+   "options": "Rental Asset"
   },
   {
    "fieldname": "item_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Item Name",
-   "options": "Item"
+   "options": "Rental Asset"
   },
   {
    "fieldname": "pricelist_name",

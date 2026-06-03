@@ -61,6 +61,7 @@ const RentalAssetList = ({
   loading,
   error,
   rentalAssets,
+  globalKpis,
   forceAvailable,
   setDefaultPriceList,
   itemsState,
@@ -297,11 +298,15 @@ const RentalAssetList = ({
             item.id === newItem.id && item.price_list === newItem.price_list
         );
 
-        if (itemExists || itemExistsInDraftQuotations) {
-          addToast("This item already exist in your cart", "error");
-        } else {
-          await createQuotationHandler([newItem]);
-        }
+     if (itemExists || itemExistsInDraftQuotations) {
+  addToast("This item already exist in your cart", "error");
+} else {
+  console.log("BOOK NOW CLICKED", newItem);
+
+  await createQuotationHandler([newItem]);
+
+  console.log("Quotation Handler Finished");
+}
       }
     } catch (error) {
       console.error("Error fetching product bundle data:", error);
@@ -416,8 +421,10 @@ const RentalAssetList = ({
   const formatDisplayDate = (date) =>
     date ? dayjs(date).format("DD MMM YYYY, hh:mm A") : "Not selected";
 
-  const getAssetStatus = (asset) =>
-    (asset?.status || "unknown").toLowerCase();
+  const getAssetStatus = (asset) => {
+    if (asset.stock_quantity <= 0) return "unavailable";
+    return (asset?.status || "unknown").toLowerCase();
+  };
 
   const getStatusClasses = (status) => {
     switch ((status || "").toLowerCase()) {
@@ -435,7 +442,7 @@ const RentalAssetList = ({
     }
   };
 
-  const assetStats = safeRentalAssets.reduce(
+  const assetStats = globalKpis || safeRentalAssets.reduce(
     (stats, asset) => {
       const status = getAssetStatus(asset);
 
@@ -933,22 +940,9 @@ const RentalAssetList = ({
                               )}
                             </div>
 
-                            <p className="mt-3 truncate text-xs text-slate-500">
-                            {asset.warehouses ? (
-                              <>
-                                Warehouse:{" "}
-                                <strong className="text-slate-700">
-                                  {asset.warehouses}
-                                </strong>
-                              </>
-                            ) : (
-                              <>&nbsp;</>
-                            )}
-                          </p>
-
                             <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2">
                               <p className="text-xs font-bold text-slate-500">
-                                Stock{" "}
+                                Available Stock{" "}
                               <strong
                                 className={
                                   asset.stock_quantity <= 0
@@ -960,7 +954,7 @@ const RentalAssetList = ({
                               </strong>
                             </p>
                               <p className="text-xs font-bold text-slate-500">
-                                Available{" "}
+                                Selected{" "}
                                 <strong className="text-slate-900">
                                   {assetData.quantity}
                                 </strong>
@@ -1017,13 +1011,19 @@ const RentalAssetList = ({
                               </div>
                               <button
                                 type="button"
+                                disabled={getAssetStatus(asset) === "unavailable"}
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!forceAvailable) {
-                                    openModal(asset);
-                                  }
-                                }}
-                                className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-black text-white shadow-md shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-hover"
+  e.stopPropagation();
+  console.log("BOOK CLICKED", asset);
+  if (!forceAvailable) {
+    openModal(asset);
+  }
+}}
+                                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-black text-white shadow-md transition-all ${
+                                  getAssetStatus(asset) === "unavailable"
+                                    ? "bg-slate-300 shadow-none cursor-not-allowed"
+                                    : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-hover"
+                                }`}
                               >
                                 Book Now
                               </button>

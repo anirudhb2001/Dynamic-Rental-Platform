@@ -27,6 +27,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
   const [selectedItemAvailStatus, setSelectedItemAvailStatus] = useState("");
+  const [globalKpis, setGlobalKpis] = useState(null);
   const [activeComponent, setActiveComponent] = useState("rentalAssetList");
   const [isComponentSidenavVisible, setIsComponentSidenavVisible] =
     useState(true);
@@ -234,6 +235,9 @@ function App() {
 
       if (quotationResponse) {
         // Update quotation names
+        console.log("Quotation Response", quotationResponse);
+
+setMainCartItems((prev) => [...prev, ...items]);
         setQuotationNames((prevQuotationNames) => [
           ...prevQuotationNames,
           quotationResponse.quotation_name,
@@ -241,6 +245,7 @@ function App() {
 
         // Fetch the updated draft quotations to get the real data
         const response = await getCustomerDraftQuotations(selectedCustomer);
+        console.log("Draft Quotations", response);
         if (response.message && response.message.quotations) {
           const quotations = response.message.quotations;
 
@@ -417,32 +422,42 @@ function App() {
 
       let availabilityMap = {};
 
-      if (!forceAvailable && pickupDate && actual_returnDate) {
-        const formattedPickupDate = formatDate(pickupDate);
-        const formattedReturnDate = formatDate(actual_returnDate);
-        const availabilityData = await getItemAvailability(
+      if (!forceAvailable) {
+        const formattedPickupDate = pickupDate ? formatDate(pickupDate) : "";
+        const formattedReturnDate = actual_returnDate ? formatDate(actual_returnDate) : "";
+        
+        const availabilityResponse = await getItemAvailability(
           formattedPickupDate,
           formattedReturnDate
         );
+        
+        setGlobalKpis(availabilityResponse.kpis || null);
+        const availabilityData = availabilityResponse["total items"] || [];
+
         availabilityMap = availabilityData.reduce((acc, item) => {
-          acc[item.item_id] = item.status;
+          acc[item.item_id] = {
+            status: item.status,
+            available_quantity: item.available_quantity
+          };
           return acc;
         }, {});
       }
 
       const formattedData = filteredItems.map((item) => {
         const itemId = item.item_id || item.name;
-        const itemStock = item.stock_qty ?? 0;
-        const defaultStatus = itemStock > 0 ? "Available" : "Unavailable";
+        let itemStock = item.stock_qty ?? 0;
+        let finalStatus = itemStock > 0 ? "Available" : "Unavailable";
+        
+        if (!forceAvailable && availabilityMap[itemId]) {
+            finalStatus = availabilityMap[itemId].status;
+            itemStock = availabilityMap[itemId].available_quantity;
+        }
 
         return {
           id: itemId,
           brand: item.brand_name || item.brand,
           name: item.item_name || item.name,
-          status:
-            pickupDate && actual_returnDate
-              ? availabilityMap[itemId] || defaultStatus
-              : defaultStatus,
+          status: finalStatus,
           price: item.price || 0,
           price_list: item.price_list_name || "N/A",
           image: item.item_image || "",
@@ -729,6 +744,7 @@ function App() {
                   loading={loading}
                   error={error}
                   rentalAssets={rentalAssets}
+                  globalKpis={globalKpis}
                   forceAvailable={forceAvailable}
                   findMatchingQuantity={findMatchingQuantity}
                   setDefaultPriceList={setDefaultPriceList}

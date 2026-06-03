@@ -9,8 +9,15 @@ import {
   LuSparkles,
   LuX,
 } from "react-icons/lu";
+const CartModal = ({
+  cartItems,
+  closeCart,
+  Quantity,
+  onContinueToCheckout,
+}) => {
 
-const CartModal = ({ cartItems, closeCart, Quantity, onContinueToCheckout }) => {
+  console.log("CartModal received:", cartItems);
+
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
   const [hoveredItemId, setHoveredItemId] = useState(null);
 
