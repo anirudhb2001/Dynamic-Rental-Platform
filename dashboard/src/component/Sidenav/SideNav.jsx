@@ -71,6 +71,7 @@ const SideNav = ({
   setSelectedItemAvailStatus,
   setIsItemStatusDropOpen,
   isItemStatusDropOpen,
+  portalMode,
 }) => {
   const safeAllBookingData = Array.isArray(allBookingData)
     ? allBookingData
@@ -637,45 +638,48 @@ const SideNav = ({
             </div>
           </section>
 
-          <div className="relative flex rounded-3xl border border-white/50 bg-white/80 p-1.5 shadow-lg backdrop-blur transition-all duration-300">
-            <div
-              className={`absolute bottom-1.5 top-1.5 w-[calc(50%-6px)] rounded-2xl bg-primary shadow-md shadow-primary/30 transition-all duration-300 ${
-                activeTab === "return" ? "translate-x-full" : "translate-x-0"
-              }`}
-            ></div>
-            <button
-              className={`relative z-10 flex-1 px-4 py-3 cursor-pointer rounded-2xl text-center font-black text-sm tracking-wide transition-all duration-300 ${
-                activeTab === "rental"
-                  ? "text-white"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              onClick={() => {
-                setActiveTab("rental");
-                onTabChange("rental");
-                setFilterCustomer("");
-                setFilterWarehouse("");
-              }}
-            >
-              Rental
-            </button>
-            <button
-              className={`relative z-10 flex-1 px-4 py-3 cursor-pointer rounded-2xl text-center font-black text-sm tracking-wide transition-all duration-300 ${
-                activeTab === "return"
-                  ? "text-white"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              onClick={() => {
-                setActiveTab("return");
-                onTabChange("return");
-                // setSelectedCustomer("")
-              }}
-            >
-              Return
-            </button>
-          </div>
+          {portalMode !== "customer" && (
+            <div className="relative flex rounded-3xl border border-white/50 bg-white/80 p-1.5 shadow-lg backdrop-blur transition-all duration-300">
+              <div
+                className={`absolute bottom-1.5 top-1.5 w-[calc(50%-6px)] rounded-2xl bg-primary shadow-md shadow-primary/30 transition-all duration-300 ${
+                  activeTab === "return" ? "translate-x-full" : "translate-x-0"
+                }`}
+              ></div>
+              <button
+                className={`relative z-10 flex-1 px-4 py-3 cursor-pointer rounded-2xl text-center font-black text-sm tracking-wide transition-all duration-300 ${
+                  activeTab === "rental"
+                    ? "text-white"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+                onClick={() => {
+                  setActiveTab("rental");
+                  onTabChange("rental");
+                  setFilterCustomer("");
+                  setFilterWarehouse("");
+                }}
+              >
+                Rental
+              </button>
+              <button
+                className={`relative z-10 flex-1 px-4 py-3 cursor-pointer rounded-2xl text-center font-black text-sm tracking-wide transition-all duration-300 ${
+                  activeTab === "return"
+                    ? "text-white"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+                onClick={() => {
+                  setActiveTab("return");
+                  onTabChange("return");
+                  // setSelectedCustomer("")
+                }}
+              >
+                Return
+              </button>
+            </div>
+          )}
 
           {activeTab === "rental" && (
             <div className="flex flex-col gap-5">
+            {portalMode !== "customer" && (
               <section className="relative z-[60] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -772,6 +776,7 @@ const SideNav = ({
                   </button>
                 )}
               </section>
+            )}
               {!forceAvailable && (
                 <button
                   onClick={onClearFilter}

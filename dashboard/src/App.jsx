@@ -22,6 +22,9 @@ import {
 } from "./services/api.jsx";
 
 function App() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const portalMode = searchParams.get("mode") === "customer" ? "customer" : "admin";
+
   const [selectedBrands, setSelectedBrands] = useState("");
   const [filterWarehouse, setFilterWarehouse] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -137,12 +140,14 @@ function App() {
 
           setUser(userInfo.data.data);
           setUserImage(userInfo.data.data?.user_image || null);
-        } else {
+        } else if (portalMode !== "customer") {
           window.location.href = `${VITE_AUTHENTICATION}/login`;
         }
       } catch (error) {
         console.error("Error checking login:", error);
-        window.location.href = `${VITE_AUTHENTICATION}/login`;
+        if (portalMode !== "customer") {
+          window.location.href = `${VITE_AUTHENTICATION}/login`;
+        }
       }
     };
 
@@ -455,6 +460,10 @@ setMainCartItems((prev) => [...prev, ...items]);
             itemStock = availabilityMap[itemId].available_quantity;
         }
 
+        if (portalMode === "customer" && finalStatus !== "Available") {
+            finalStatus = "Currently Unavailable";
+        }
+
         return {
           id: itemId,
           brand: item.brand_name || item.brand,
@@ -653,6 +662,7 @@ setMainCartItems((prev) => [...prev, ...items]);
               user={user}
               companyName={companyName}
               logo={logo}
+              portalMode={portalMode}
             />
           </div>
 
@@ -699,6 +709,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   setMainCartItems={setMainCartItems}
                   setIsDateDropdownOpen={setIsDateDropdownOpen}
                   filterDateStatus={filterDateStatus}
+                  portalMode={portalMode}
                   isDateDropdownOpen={isDateDropdownOpen}
                   setFilterDateStatus={setFilterDateStatus}
                   selectedItemAvailStatus={selectedItemAvailStatus}
@@ -749,6 +760,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   globalKpis={globalKpis}
                   branding={brandingData}
                   forceAvailable={forceAvailable}
+                  portalMode={portalMode}
                   findMatchingQuantity={findMatchingQuantity}
                   setDefaultPriceList={setDefaultPriceList}
                   itemsState={itemsState}

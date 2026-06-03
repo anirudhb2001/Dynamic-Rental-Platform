@@ -19,6 +19,7 @@ function Header({
   user,
   companyName,
   logo,
+  portalMode,
 }) {
   const [isNavbarVisible, setIsNavbarVisible] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -110,44 +111,48 @@ function Header({
             <span className="absolute -top-1 -right-2 h-2 w-2 bg-primary rounded-full"></span>
           </button>
 
-          <a
-            href={VITE_PUBLIC_DESK_LINK}
-            className="hidden md:flex items-center gap-1 text-gray-600 hover:text-primary font-medium text-sm transition-colors"
-          >
-            <span>Desk</span>
-            <PiCaretDownBold className="h-3 w-3" />
-          </a>
+          {portalMode !== "customer" && (
+            <a
+              href={VITE_PUBLIC_DESK_LINK}
+              className="hidden md:flex items-center gap-1 text-gray-600 hover:text-primary font-medium text-sm transition-colors"
+            >
+              <span>Desk</span>
+              <PiCaretDownBold className="h-3 w-3" />
+            </a>
+          )}
           
-          <div className="relative ml-2" ref={dropdownRef}>
-            <div onClick={toggleDropdown} className="cursor-pointer">
-              {userImage ? (
-                <div className="h-9 w-9 rounded-full overflow-hidden bg-white ring-2 ring-transparent hover:ring-primary/30 transition-all">
-                  <img
-                    src={userImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm uppercase ring-2 ring-transparent hover:ring-primary/30 transition-all shadow-sm">
-                  {getUserInitials(user?.full_name || user?.name || "A")}
+          {portalMode !== "customer" && (
+            <div className="relative ml-2" ref={dropdownRef}>
+              <div onClick={toggleDropdown} className="cursor-pointer">
+                {userImage ? (
+                  <div className="h-9 w-9 rounded-full overflow-hidden bg-white ring-2 ring-transparent hover:ring-primary/30 transition-all">
+                    <img
+                      src={userImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm uppercase ring-2 ring-transparent hover:ring-primary/30 transition-all shadow-sm">
+                    {getUserInitials(user?.full_name || user?.name || "A")}
+                  </div>
+                )}
+              </div>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 font-medium text-gray-900 bg-gray-50">
+                    {user?.full_name || user?.name || "User"}
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Logout
+                  </button>
                 </div>
               )}
             </div>
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 font-medium text-gray-900 bg-gray-50">
-                  {user?.full_name || user?.name || "User"}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 

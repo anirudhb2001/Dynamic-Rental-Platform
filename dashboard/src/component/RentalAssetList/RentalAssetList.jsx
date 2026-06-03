@@ -71,6 +71,7 @@ const RentalAssetList = ({
   setIsSortActive,
   sortOption,
   setSortOption,
+  portalMode,
 }) => {
   const safeRentalAssets = Array.isArray(rentalAssets) ? rentalAssets : [];
   const safeMainCartItems = Array.isArray(mainCartItems) ? mainCartItems : [];
@@ -657,30 +658,32 @@ const RentalAssetList = ({
             </div>
           </section>
 
-          <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            {kpiCards.map(({ label, value, icon: Icon, accent, glow }) => (
-              <div
-                key={label}
-                className={`rounded-3xl border border-slate-100 bg-white p-4 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${glow}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                      {label}
-                    </p>
-                    <p className="mt-2 text-3xl font-black text-slate-950">
-                      {value}
-                    </p>
-                  </div>
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl ${accent}`}
-                  >
-                    <Icon className="h-5 w-5" />
+          {portalMode !== "customer" && (
+            <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+              {kpiCards.map(({ label, value, icon: Icon, accent, glow }) => (
+                <div
+                  key={label}
+                  className={`rounded-3xl border border-slate-100 bg-white p-4 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${glow}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                        {label}
+                      </p>
+                      <p className="mt-2 text-3xl font-black text-slate-950">
+                        {value}
+                      </p>
+                    </div>
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-2xl ${accent}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </section>
+              ))}
+            </section>
+          )}
 
           {loading || loadingQuantities ? (
             <section className="space-y-4">
@@ -1009,19 +1012,23 @@ const RentalAssetList = ({
                                 type="button"
                                 disabled={getAssetStatus(asset) !== "available"}
                                 onClick={(e) => {
-  e.stopPropagation();
-  console.log("BOOK CLICKED", asset);
-  if (!forceAvailable) {
-    openModal(asset);
-  }
-}}
+                                  e.stopPropagation();
+                                  console.log("BOOK CLICKED", asset);
+                                  if (portalMode === "customer") {
+                                    addToast("OTP Login functionality coming soon!", "info");
+                                  } else if (!forceAvailable) {
+                                    openModal(asset);
+                                  }
+                                }}
                                 className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-black text-white shadow-md transition-all ${
                                   getAssetStatus(asset) !== "available"
                                     ? "bg-slate-300 shadow-none cursor-not-allowed"
                                     : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-hover"
                                 }`}
                               >
-                                Book Now
+                                {portalMode === "customer" 
+                                  ? (getAssetStatus(asset) === "available" ? "Login to Book" : "Currently Unavailable") 
+                                  : "Book Now"}
                               </button>
                             </div>
                           </div>
