@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-01-09 11:18:24.983706",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rental_settings_details_section",
+  "security_document_type",
+  "section_break_qyno",
+  "warehouse",
+  "column_break_znph",
+  "overdue_check"
+ ],
+ "fields": [
+  {
+   "fieldname": "security_document_type",
+   "fieldtype": "Table",
+   "label": "Security Document Type",
+   "options": "Rental Security Document Type"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "rental_settings_details_section",
+   "fieldtype": "Section Break",
+   "label": "Rental Settings Details"
+  },
+  {
+   "fieldname": "column_break_znph",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_qyno",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "overdue_check",
+   "fieldtype": "Check",
+   "label": "Rental Return Overdue Check"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-05-29 15:27:50.468980",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Rental Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

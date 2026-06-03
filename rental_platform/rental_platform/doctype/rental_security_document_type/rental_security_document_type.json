@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-01-09 11:24:53.654892",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "document_type_section",
+  "attachment",
+  "column_break_dvpl",
+  "method_of_collecting",
+  "document_attachment",
+  "section_break_zbqm",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_type_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Select",
+   "label": "Document Type",
+   "options": "\nAadhar Card\nPAN Card\nPassport\nLicense\nOther"
+  },
+  {
+   "fieldname": "document_attachment",
+   "fieldtype": "Attach",
+   "label": "Document Attachment"
+  },
+  {
+   "fieldname": "column_break_dvpl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "method_of_collecting",
+   "fieldtype": "Select",
+   "label": "Method of Collecting",
+   "options": "Softcopy\nPhysical"
+  },
+  {
+   "fieldname": "section_break_zbqm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Not open\nOpen\nClosed"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-03-05 18:59:32.481786",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Rental Security Document Type",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

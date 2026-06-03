@@ -1,0 +1,28 @@
+const VITE_BACKEND_URL = window.location.origin;
+
+export const VITE_AUTHENTICATION = `${VITE_BACKEND_URL}`;
+export const VITE_PUBLIC_ITEM_URL = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.items`;
+export const VITE_PUBLIC_PRICE_LIST_QTY_URL = `${VITE_BACKEND_URL}/api/method/rental_platform.rental_platform.qty_basedon_pricelist.price_list_qty`;
+export const VITE_PUBLIC_RETURN_QTY_URL = `${VITE_BACKEND_URL}/api/method/rental_platform.rental_platform.qty_basedon_pricelist.qty_return`;
+export const VITE_PUBLIC_CUSTOMER_BASE_API = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.customer`;
+export const VITE_PUBLIC_CART_URL = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.cart`;
+export const VITE_PUBLIC_AVAIL_ITEM = `${VITE_BACKEND_URL}/api/method/rental_platform.rental_platform.available_item`;
+export const VITE_PUBLIC_REDIRECT_URL = `${VITE_BACKEND_URL}/app/sales-order`;
+export const VITE_PUBLIC_SALE_INVOICE_URL = `${VITE_BACKEND_URL}/app/sales-invoice`;
+export const VITE_PUBLIC_ADD_CUSTOMER_URL = `${VITE_BACKEND_URL}/app/customer`;
+export const VITE_PUBLIC_DASHBOARD = `${VITE_BACKEND_URL}/dashboard/`;
+export const VITE_PUBLIC_BOOKING_ENTRY_DATA = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.booking_entry`;
+export const VITE_PUBLIC_FINANCIAL_BOOKING_DATA = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.be_with_financial_details`;
+export const VITE_PUBLIC_CANCEL_BOOKING = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.cancel_booking`;
+export const VITE_PUBLIC_EXTEND_BOOKING = `${VITE_BACKEND_URL}/api/method/rental_platform.rental_platform.extend_booking`;
+export const VITE_PUBLIC_RETURN_BOOKING = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.return_booking`;
+export const VITE_PUBLIC_ADDITONAL_DISCOUNT = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.ad_discount.update_additional_discount`;
+export const VITE_PUBLIC_SINGLE_CART = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.single_cart.single_cart`
+export const VITE_PUBLIC_BRAND_FILTER_IN_BE = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.filtermodel.get_item_brands`
+export const VITE_PUBLIC_SEARCH_ITEM = `${VITE_BACKEND_URL}/api/method/rental_platform.rental_platform.search_item`;
+export const VITE_PUBLIC_DESK_LINK = `${VITE_BACKEND_URL}/app/home`
+export const VITE_PUBLIC_BOOKING_ENTRY_LINK = `${VITE_BACKEND_URL}/app/booking-entry`
+export const VITE_PUBLIC_SALE_INVOICE_LINK = `${VITE_BACKEND_URL}/app/sales-invoice/view/list?custom_booking_entry=`
+export const VITE_PUBLIC_PAYMENT_ENTRY_LINK = `${VITE_BACKEND_URL}/app/payment-entry`
+export const VITE_PUBLIC_CREATE_PAYMENT_ENTRY = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.return_payment`;
+export const VITE_PUBLIC_ITEM_WAREHOUSE = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.validate`;

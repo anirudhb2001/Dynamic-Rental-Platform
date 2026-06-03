@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "RB-.YYYY.-.#####",
+ "creation": "2026-05-29 11:24:48.479039",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "rental_category",
+  "asset",
+  "start_date",
+  "end_date",
+  "rental_duration",
+  "rental_rate",
+  "deposit_amount",
+  "booking_status",
+  "pricelist_name",
+  "quantity",
+  "stock_quantity",
+  "quotation",
+  "sales_order"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Asset",
+   "options": "Rental Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "End Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rental_duration",
+   "fieldtype": "Int",
+   "label": "Rental Duration (Hours/Days)"
+  },
+  {
+   "fieldname": "rental_rate",
+   "fieldtype": "Currency",
+   "label": "Rental Rate"
+  },
+  {
+   "fieldname": "deposit_amount",
+   "fieldtype": "Currency",
+   "label": "Deposit Amount"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "booking_status",
+   "fieldtype": "Select",
+   "label": "Booking Status",
+   "options": "Draft\nReserved\nPicked Up\nReturned\nCompleted"
+  },
+  {
+   "fieldname": "rental_category",
+   "fieldtype": "Link",
+   "label": "Rental Category",
+   "options": "Rental Asset Category",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pricelist_name",
+   "fieldtype": "Data",
+   "label": "Price List Name"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "label": "Quantity"
+  },
+  {
+   "fieldname": "stock_quantity",
+   "fieldtype": "Float",
+   "label": "Stock Quantity"
+  },
+  {
+   "fieldname": "quotation",
+   "fieldtype": "Link",
+   "label": "Quotation",
+   "options": "Quotation"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-30 20:19:08.443227",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Rental Booking",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

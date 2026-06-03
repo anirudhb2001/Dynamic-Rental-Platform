@@ -1,0 +1,15 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "upstream"]
+	url = https://theertha1:glpat-1iy_GsG0b2Lz_HhSD981o2M6MQpvOjEKdTpkcXdoNQ8.01.17104qxpy@gitlab.com/rental-management3/rent-camera-kochi.git
+	fetch = +refs/heads/main:refs/remotes/upstream/main
+[branch "main"]
+	remote = upstream
+	merge = refs/heads/main
+	vscode-merge-base = upstream/main
+[remote "origin"]
+	url = https://github.com/anirudhb2001/Dynamic-Rental-Platform.git
+	fetch = +refs/heads/*:refs/remotes/origin/*

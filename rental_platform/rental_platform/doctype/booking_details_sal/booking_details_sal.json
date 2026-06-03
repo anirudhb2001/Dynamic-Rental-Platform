@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-01-08 16:25:13.776797",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_rx8j",
+  "rental_item_id",
+  "item_name",
+  "pricelist_name",
+  "price",
+  "quantity",
+  "stock_quantity",
+  "amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_rx8j",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rental_item_id",
+   "fieldtype": "Link",
+   "label": "Rental Item Id",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Name ",
+   "options": "Item"
+  },
+  {
+   "fieldname": "pricelist_name",
+   "fieldtype": "Link",
+   "label": "Pricelist Name",
+   "options": "Price List"
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Currency",
+   "label": "Price"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Int",
+   "label": "Rental Quantity"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "stock_quantity",
+   "fieldtype": "Int",
+   "label": "Quantity"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-02-25 18:39:28.767721",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Booking Details SAL",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

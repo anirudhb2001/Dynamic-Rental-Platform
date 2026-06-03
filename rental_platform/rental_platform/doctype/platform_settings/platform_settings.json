@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-26 00:32:30.062903",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "platform_name",
+  "enable_otp",
+  "enable_delivery",
+  "enable_discount",
+  "enable_whatsapp",
+  "enable_deposit",
+  "enable_return_flow",
+  "theme_color",
+  "logo",
+  "primary_font",
+  "currency",
+  "tax_percentage",
+  "default_deposit",
+  "default_rental_mode"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enable_otp",
+   "fieldtype": "Check",
+   "label": "Enable OTP"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_delivery",
+   "fieldtype": "Check",
+   "label": "Enable Delivery"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_discount",
+   "fieldtype": "Check",
+   "label": "Enable Discount"
+  },
+  {
+   "fieldname": "theme_color",
+   "fieldtype": "Color",
+   "label": "Theme Color"
+  },
+  {
+   "fieldname": "logo",
+   "fieldtype": "Attach Image",
+   "label": "Logo"
+  },
+  {
+   "fieldname": "platform_name",
+   "fieldtype": "Data",
+   "label": "Platform Name"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_whatsapp",
+   "fieldtype": "Check",
+   "label": "Enable WhatsApp"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_deposit",
+   "fieldtype": "Check",
+   "label": "Enable Deposit"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_return_flow",
+   "fieldtype": "Check",
+   "label": "Enable Return Flow"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "primary_font",
+   "fieldtype": "Select",
+   "label": "Primary Font",
+   "options": "Inter\nPoppins\nRoboto\nMontserrat\nOpen Sans"
+  },
+  {
+   "fieldname": "tax_percentage",
+   "fieldtype": "Percent",
+   "label": "Tax Percentage"
+  },
+  {
+   "fieldname": "default_deposit",
+   "fieldtype": "Currency",
+   "label": "Default Deposit"
+  },
+  {
+   "fieldname": "default_rental_mode",
+   "fieldtype": "Select",
+   "label": "Default Rental Mode",
+   "options": "Hourly\nDaily\nWeekly\nMonthly"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-26 10:57:36.065054",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Platform Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

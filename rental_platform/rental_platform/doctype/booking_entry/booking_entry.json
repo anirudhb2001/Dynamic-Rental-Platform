@@ -1,0 +1,175 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "BE.#####",
+ "creation": "2024-11-20 12:12:29.301305",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_hnlm",
+  "amended_from",
+  "customer",
+  "quotation",
+  "sales_order",
+  "status",
+  "return_status",
+  "column_break_2yx1",
+  "customer_name",
+  "pickup_from_date",
+  "rental_from_date",
+  "rental_to_date",
+  "actual_to_date",
+  "security_document_status",
+  "section_break_mpzd",
+  "rental_items"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_hnlm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Booking Entry",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Booking Entry Status",
+   "options": "\nReserved\nRented\nReturned\nPartially Returned\nCancelled\nComplete",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rental_from_date",
+   "fieldtype": "Datetime",
+   "label": "Rental from date"
+  },
+  {
+   "fieldname": "rental_to_date",
+   "fieldtype": "Datetime",
+   "label": "Rental to date"
+  },
+  {
+   "fieldname": "actual_to_date",
+   "fieldtype": "Datetime",
+   "label": "Actual to date"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rental_items",
+   "fieldtype": "Table",
+   "label": "Rental items",
+   "options": "Booking details Table",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quotation",
+   "fieldtype": "Link",
+   "label": "Quotation",
+   "options": "Quotation"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "column_break_2yx1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "security_document_status",
+   "fieldtype": "Select",
+   "label": "Security Document Status",
+   "options": "\nDocument Returned\nDocument Pending To Return"
+  },
+  {
+   "fieldname": "section_break_mpzd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "return_status",
+   "fieldtype": "Select",
+   "label": "Item Return Status",
+   "options": "\nOverdue\nPartially Overdue\nDue Today\nDue Tomorrow\nUpcoming\nActive",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "customer.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "pickup_from_date",
+   "fieldtype": "Datetime",
+   "label": "Pickup from date",
+   "no_copy": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_calendar_and_gantt": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-17 08:36:38.721003",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Booking Entry",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

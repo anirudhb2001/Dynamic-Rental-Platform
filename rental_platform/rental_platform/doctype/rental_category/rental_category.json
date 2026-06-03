@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:category_name",
+ "creation": "2026-05-26 00:35:10.405349",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "category_name",
+  "icon",
+  "category_code",
+  "description",
+  "theme_color",
+  "active",
+  "allow_booking",
+  "allow_return"
+ ],
+ "fields": [
+  {
+   "fieldname": "category_name",
+   "fieldtype": "Data",
+   "label": "Category Name",
+   "unique": 1
+  },
+  {
+   "fieldname": "icon",
+   "fieldtype": "Attach",
+   "label": "Icon"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "category_code",
+   "fieldtype": "Data",
+   "label": "Category Code"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "theme_color",
+   "fieldtype": "Color",
+   "label": "Theme Color"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_booking",
+   "fieldtype": "Check",
+   "label": "Allow Booking"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_return",
+   "fieldtype": "Check",
+   "label": "Allow Return"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-26 11:59:24.065311",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Rental Category",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

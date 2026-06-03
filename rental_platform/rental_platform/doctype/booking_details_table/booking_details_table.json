@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-11-25 10:33:50.602276",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1hho",
+  "rental_item_id",
+  "item_name",
+  "pricelist_name",
+  "price",
+  "quantity",
+  "stock_quantity",
+  "amount",
+  "returned_item"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1hho",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rental_item_id",
+   "fieldtype": "Link",
+   "label": "Rental Item ID",
+   "options": "Item"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "options": "Item"
+  },
+  {
+   "fieldname": "pricelist_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Pricelist Name",
+   "options": "Price List"
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Price"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Rental Quantity"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Amount"
+  },
+  {
+   "fieldname": "stock_quantity",
+   "fieldtype": "Int",
+   "label": "Quantity"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "returned_item",
+   "fieldtype": "Check",
+   "label": "Returned Item"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-21 17:15:09.127166",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Booking details Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

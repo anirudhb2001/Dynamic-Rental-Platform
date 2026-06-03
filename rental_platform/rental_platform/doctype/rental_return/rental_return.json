@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "RR-.YYYY.-.#####",
+ "creation": "2026-05-29 11:24:48.561786",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "booking",
+  "return_date",
+  "damage_found",
+  "damage_cost",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "booking",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Booking",
+   "options": "Rental Booking",
+   "reqd": 1
+  },
+  {
+   "fieldname": "return_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Return Date",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "damage_found",
+   "fieldtype": "Check",
+   "label": "Damage Found"
+  },
+  {
+   "fieldname": "damage_cost",
+   "fieldtype": "Currency",
+   "label": "Damage Cost"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-29 11:24:48.561786",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Rental Return",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
