@@ -62,6 +62,7 @@ const RentalAssetList = ({
   error,
   rentalAssets,
   globalKpis,
+  branding,
   forceAvailable,
   setDefaultPriceList,
   itemsState,
@@ -88,7 +89,6 @@ const RentalAssetList = ({
   const [selectedItemName, setSelectedItemName] = useState("");
   const [hideAddToCartButton, setHideAddToCartButton] = useState(false);
   const [loadingQuantities, setLoadingQuantities] = useState(false);
-  const [branding, setBranding] = useState({});
   useEffect(() => {
     const initialStockQty = {};
     safeRentalAssets.forEach((asset) => {
@@ -422,7 +422,6 @@ const RentalAssetList = ({
     date ? dayjs(date).format("DD MMM YYYY, hh:mm A") : "Not selected";
 
   const getAssetStatus = (asset) => {
-    if (asset.stock_quantity <= 0) return "unavailable";
     return (asset?.status || "unknown").toLowerCase();
   };
 
@@ -432,6 +431,7 @@ const RentalAssetList = ({
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
       case "reserved":
         return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+      case "on ride":
       case "rented":
         return "bg-red-50 text-red-700 ring-1 ring-red-200";
       case "maintenance":
@@ -918,7 +918,7 @@ const RentalAssetList = ({
                                       ? "bg-emerald-500"
                                       : status === "reserved"
                                       ? "bg-amber-500"
-                                      : status === "rented"
+                                      : status === "on ride" || status === "rented"
                                       ? "bg-red-500"
                                       : "bg-sky-500"
                                   }`}
@@ -928,9 +928,11 @@ const RentalAssetList = ({
                                     ? "Ready to book"
                                     : status === "reserved"
                                     ? "Reserved slot"
-                                    : status === "rented"
+                                    : status === "on ride" || status === "rented"
                                     ? "Currently on ride"
-                                    : "Under maintenance"}
+                                    : status === "maintenance"
+                                    ? "Under maintenance"
+                                    : "Unavailable"}
                                 </span>
                               </div>
                               {asset.custom_is_bulk_item === 1 && (
@@ -953,12 +955,6 @@ const RentalAssetList = ({
                                 {Math.max(asset.stock_quantity ?? 0, 0)}
                               </strong>
                             </p>
-                              <p className="text-xs font-bold text-slate-500">
-                                Selected{" "}
-                                <strong className="text-slate-900">
-                                  {assetData.quantity}
-                                </strong>
-                              </p>
                             </div>
 
                           {asset.custom_is_bulk_item == 1 && (
@@ -1011,7 +1007,7 @@ const RentalAssetList = ({
                               </div>
                               <button
                                 type="button"
-                                disabled={getAssetStatus(asset) === "unavailable"}
+                                disabled={getAssetStatus(asset) !== "available"}
                                 onClick={(e) => {
   e.stopPropagation();
   console.log("BOOK CLICKED", asset);
@@ -1020,7 +1016,7 @@ const RentalAssetList = ({
   }
 }}
                                 className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-black text-white shadow-md transition-all ${
-                                  getAssetStatus(asset) === "unavailable"
+                                  getAssetStatus(asset) !== "available"
                                     ? "bg-slate-300 shadow-none cursor-not-allowed"
                                     : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-hover"
                                 }`}

@@ -78,6 +78,7 @@ function App() {
   const [stockQuantities, setStockQuantities] = useState({});
   const [companyName, setCompanyName] = useState("");
   const [logo, setLogo] = useState("");
+  const [brandingData, setBrandingData] = useState({});
 
   const hexToRgb = (hex) => {
     if (!hex) return null;
@@ -91,6 +92,7 @@ function App() {
     const fetchBranding = async () => {
       const data = await getBrandingSettings();
       if (data) {
+        setBrandingData(data);
         if (data.company_name) setCompanyName(data.company_name);
         if (data.logo) setLogo(data.logo);
         
@@ -745,6 +747,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   error={error}
                   rentalAssets={rentalAssets}
                   globalKpis={globalKpis}
+                  branding={brandingData}
                   forceAvailable={forceAvailable}
                   findMatchingQuantity={findMatchingQuantity}
                   setDefaultPriceList={setDefaultPriceList}
