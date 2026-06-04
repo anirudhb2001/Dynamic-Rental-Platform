@@ -16,9 +16,9 @@ import { MdOutlineClear } from "react-icons/md";
 import dayjs from "dayjs";
 import { VITE_PUBLIC_ADD_CUSTOMER_URL } from "../../../../constants.js";
 import {
-  LuBike,
+  LuPackage,
   LuCalendarClock,
-  LuCheckCircle2,
+  LuCheckCircle,
   LuFilter,
   LuRotateCcw,
   LuSearch,
@@ -624,13 +624,13 @@ const SideNav = ({
             <div className="absolute bottom-0 left-8 h-16 w-32 rounded-t-full bg-white/10 blur-2xl"></div>
             <div className="relative z-10">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20 backdrop-blur">
-                <LuBike className="h-6 w-6" />
+                <LuPackage className="h-6 w-6" />
               </div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-white/60">
                 Rental Platform
               </p>
               <h2 className="mt-1 text-xl font-black leading-tight">
-                {companyName || "Bike Rentals"}
+                {companyName || "Asset Rentals"}
               </h2>
               <p className="mt-2 text-sm font-medium text-white/70">
                 Manage bookings and returns
@@ -691,7 +691,7 @@ const SideNav = ({
                         Customer
                       </p>
                       <h3 className="text-sm font-black text-slate-950">
-                        Select Rider
+                        Select Customer
                       </h3>
                     </div>
                   </div>
@@ -1015,7 +1015,7 @@ const SideNav = ({
                   <section className="relative z-[30] rounded-3xl border border-white/50 bg-white/85 p-4 shadow-lg backdrop-blur transition-all duration-300 hover:shadow-xl">
                     <div className="mb-3 flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                        <LuCheckCircle2 className="h-5 w-5" />
+                        <LuCheckCircle className="h-5 w-5" />
                       </div>
                       <div>
                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">

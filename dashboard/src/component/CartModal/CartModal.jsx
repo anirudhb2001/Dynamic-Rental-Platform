@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  LuBike,
+  LuPackage,
   LuChevronDown,
   LuChevronRight,
   LuImage,
@@ -75,10 +75,10 @@ const CartModal = ({
                 Rental Cart
               </div>
               <h2 className="mt-3 text-2xl font-black text-slate-950">
-                Selected Bikes
+                Selected Items
               </h2>
               <p className="mt-1 text-sm font-medium text-slate-500">
-                {safeCartItems.length} bike{safeCartItems.length === 1 ? "" : "s"} ready
+                {safeCartItems.length} item{safeCartItems.length === 1 ? "" : "s"} ready
                 for checkout
               </p>
             </div>
@@ -97,13 +97,13 @@ const CartModal = ({
           {safeCartItems.length === 0 ? (
             <div className="flex min-h-full flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center shadow-soft">
               <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br from-primary/15 to-slate-100 text-primary">
-                <LuBike className="h-12 w-12" />
+                <LuPackage className="h-12 w-12" />
               </div>
               <h3 className="mt-6 text-2xl font-black text-slate-950">
-                No Bikes Selected
+                No Items Selected
               </h3>
               <p className="mt-2 max-w-xs text-sm font-medium text-slate-500">
-                Browse bikes and add them to your cart.
+                Browse items and add them to your cart.
               </p>
             </div>
           ) : (
@@ -137,7 +137,7 @@ const CartModal = ({
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate text-xs font-black uppercase tracking-wide text-primary">
-                              {item.brand || "Bike Rental"}
+                              {item.brand || "Item Rental"}
                             </p>
                             <h3 className="mt-1 line-clamp-2 text-base font-black leading-snug text-slate-950">
                               {item.name}
@@ -225,7 +225,7 @@ const CartModal = ({
         <footer className="border-t border-white/70 bg-white/95 p-4 shadow-[0_-12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl">
           <div className="rounded-3xl bg-gradient-to-br from-slate-950 to-slate-800 p-4 text-white shadow-lg">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-white/60">Total Bikes</span>
+              <span className="font-bold text-white/60">Total Items</span>
               <span className="font-black">{safeCartItems.length}</span>
             </div>
             <div className="mt-3 flex items-center justify-between">

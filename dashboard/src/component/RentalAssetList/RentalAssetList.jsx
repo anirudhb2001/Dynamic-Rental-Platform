@@ -3,14 +3,15 @@ import { HiViewList } from "react-icons/hi";
 import { useState, useEffect } from "react";
 import { IoIosArrowDown } from "react-icons/io";
 import {
-  LuBike,
   LuCalendarClock,
-  LuCheckCircle2,
-  LuClock3,
   LuSearch,
   LuShoppingCart,
   LuSparkles,
   LuWrench,
+  LuPackage,
+  LuCheckCircle,
+  LuCalendar,
+  LuRoute,
 } from "react-icons/lu";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import CartModal from "../CartModal/CartModal.jsx";
@@ -470,30 +471,30 @@ const RentalAssetList = ({
 
   const kpiCards = [
     {
-      label: "Total Bikes",
+      label: "Total Assets",
       value: assetStats.total,
-      icon: LuBike,
+      icon: LuPackage,
       accent: "bg-slate-900 text-white",
       glow: "shadow-slate-200",
     },
     {
       label: "Available",
       value: assetStats.available,
-      icon: LuCheckCircle2,
+      icon: LuCheckCircle,
       accent: "bg-emerald-500 text-white",
       glow: "shadow-emerald-100",
     },
     {
       label: "Reserved",
       value: assetStats.reserved,
-      icon: LuClock3,
+      icon: LuCalendar,
       accent: "bg-amber-500 text-white",
       glow: "shadow-amber-100",
     },
     {
       label: "On Ride",
       value: assetStats.onRide,
-      icon: LuBike,
+      icon: LuRoute,
       accent: "bg-red-500 text-white",
       glow: "shadow-red-100",
     },
@@ -884,7 +885,7 @@ const RentalAssetList = ({
                             </span>
                           </div>
                           <div className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 text-primary shadow-md backdrop-blur transition-transform group-hover:scale-110">
-                            <LuBike className="h-5 w-5" />
+                            <LuPackage className="h-5 w-5" />
                           </div>
                           <div className="relative flex h-52 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-primary/10">
                             <div className="absolute bottom-0 h-20 w-full bg-gradient-to-t from-white to-transparent"></div>
