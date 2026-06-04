@@ -1,0 +1,25 @@
+
+> dashboard@0.0.0 build
+> vite build --base=/assets/rental_platform/dashboard/ && yarn copy-html-entry
+
+vite v5.4.11 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 20 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 1183 modules transformed.
+rendering chunks...
+computing gzip size...
+../rental_platform/public/dashboard/assets/cropped-favicon-1-32x32-DfpDrSut.png    0.73 kB
+../rental_platform/public/dashboard/index.html                                     0.99 kB │ gzip:   0.50 kB
+../rental_platform/public/dashboard/assets/index-CpWefMrk.css                     69.94 kB │ gzip:  11.08 kB
+../rental_platform/public/dashboard/assets/index-Bg5ebCVY.js                     901.69 kB │ gzip: 271.57 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.05s
+yarn run v1.22.22
+$ cp ../rental_platform/public/dashboard/index.html ../rental_platform/www/dashboard.html
+Done in 0.09s.

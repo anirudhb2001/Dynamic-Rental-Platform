@@ -11,7 +11,7 @@ import {
   LuPackage,
   LuCheckCircle,
   LuCalendar,
-  LuRoute,
+  LuMapPin,
 } from "react-icons/lu";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import CartModal from "../CartModal/CartModal.jsx";
@@ -30,6 +30,8 @@ import {
   getCustomerDraftQuotations,
 } from "../../services/api.jsx";
 import CancelBookingModal from "../ConfirmationModal/CancelBookingModal.jsx";
+import CustomerLoginModal from "../Auth/CustomerLoginModal.jsx";
+import { customerAuth } from "../../services/customerAuth";
 
 const RentalAssetList = ({
   stockQuantities,
@@ -91,6 +93,16 @@ const RentalAssetList = ({
   const [selectedItemName, setSelectedItemName] = useState("");
   const [hideAddToCartButton, setHideAddToCartButton] = useState(false);
   const [loadingQuantities, setLoadingQuantities] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(customerAuth.isCustomerAuthenticated());
+
+  useEffect(() => {
+    const unsubscribe = customerAuth.subscribeToAuthChanges((state) => {
+      setIsAuthenticated(state.isAuthenticated);
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const initialStockQty = {};
     safeRentalAssets.forEach((asset) => {
@@ -494,7 +506,7 @@ const RentalAssetList = ({
     {
       label: "On Ride",
       value: assetStats.onRide,
-      icon: LuRoute,
+      icon: LuMapPin,
       accent: "bg-red-500 text-white",
       glow: "shadow-red-100",
     },
@@ -1015,8 +1027,8 @@ const RentalAssetList = ({
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   console.log("BOOK CLICKED", asset);
-                                  if (portalMode === "customer") {
-                                    addToast("OTP Login functionality coming soon!", "info");
+                                  if (portalMode === "customer" && !isAuthenticated) {
+                                    setIsAuthModalOpen(true);
                                   } else if (!forceAvailable) {
                                     openModal(asset);
                                   }
@@ -1028,7 +1040,7 @@ const RentalAssetList = ({
                                 }`}
                               >
                                 {portalMode === "customer" 
-                                  ? (getAssetStatus(asset) === "available" ? "Login to Book" : "Currently Unavailable") 
+                                  ? (getAssetStatus(asset) === "available" ? (isAuthenticated ? "Book Now" : "Login to Book") : "Currently Unavailable") 
                                   : "Book Now"}
                               </button>
                             </div>
@@ -1147,6 +1159,14 @@ const RentalAssetList = ({
         addToast={addToast}
         fetchData={fetchData}
       />
+      {isAuthModalOpen && (
+        <CustomerLoginModal
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={() => {
+            addToast("Successfully logged in", "success");
+          }}
+        />
+      )}
     </div>
   );
 };

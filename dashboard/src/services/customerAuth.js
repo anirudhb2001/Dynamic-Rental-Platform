@@ -1,0 +1,135 @@
+import axios from "axios";
+
+// Configure axios instance to handle cookies
+const api = axios.create({
+  withCredentials: true,
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
+});
+
+api.interceptors.request.use((config) => {
+  if (window.csrf_token) {
+    config.headers["X-Frappe-CSRF-Token"] = window.csrf_token;
+  }
+  return config;
+});
+
+let authState = {
+  isAuthenticated: false,
+  user: null,
+  customerId: null,
+  customerDetails: null,
+};
+
+let listeners = [];
+
+const notifyListeners = () => {
+  listeners.forEach((listener) => listener({ ...authState }));
+};
+
+export const customerAuth = {
+  subscribeToAuthChanges: (listener) => {
+    listeners.push(listener);
+    listener({ ...authState }); // initial call
+    return () => {
+      listeners = listeners.filter((l) => l !== listener);
+    };
+  },
+
+  getAuthState: () => ({ ...authState }),
+  
+  isCustomerAuthenticated: () => authState.isAuthenticated,
+  getCurrentCustomer: () => authState.user,
+  getCurrentCustomerId: () => authState.customerId,
+  getCurrentCustomerDetails: () => authState.customerDetails,
+
+  sendLoginOTP: async (mobileNo) => {
+    try {
+      const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.send_login_otp", {
+        mobile_no: mobileNo,
+      });
+      return response.data?.message || response.data;
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      return { success: false, message: error.message || "Failed to send OTP" };
+    }
+  },
+
+  verifyLoginOTP: async (mobileNo, otpValue) => {
+    try {
+      const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.verify_login_otp", {
+        mobile_no: mobileNo,
+        otp_value: otpValue,
+      });
+      
+      const data = response.data?.message || response.data;
+
+      if (data?.success) {
+        // Hydrate context after successful login
+        await customerAuth.hydrateContext();
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      return { success: false, message: error.message || "Failed to verify OTP" };
+    }
+  },
+
+  logoutCustomer: async () => {
+    try {
+      await api.post("/api/method/logout");
+      authState = {
+        isAuthenticated: false,
+        user: null,
+        customerId: null,
+        customerDetails: null,
+      };
+      notifyListeners();
+      return { success: true };
+    } catch (error) {
+      console.error("Error logging out:", error);
+      return { success: false, message: "Logout failed" };
+    }
+  },
+
+  hydrateContext: async () => {
+    try {
+      const response = await api.get("/api/method/rental_platform.web_api.customer_portal_auth.get_customer_context");
+      const data = response.data?.message || response.data;
+
+      if (data?.success) {
+        authState = {
+          isAuthenticated: true,
+          user: data.user,
+          customerId: data.customer_id,
+          customerDetails: data.customer,
+        };
+      } else {
+        authState = {
+          isAuthenticated: false,
+          user: null,
+          customerId: null,
+          customerDetails: null,
+        };
+      }
+      notifyListeners();
+      return authState;
+    } catch (error) {
+      console.error("Error hydrating context:", error);
+      authState = {
+        isAuthenticated: false,
+        user: null,
+        customerId: null,
+        customerDetails: null,
+      };
+      notifyListeners();
+      return authState;
+    }
+  },
+};
+
+// Auto hydrate on load
+customerAuth.hydrateContext();
