@@ -9,6 +9,14 @@ def warehouse_validate(doc, method=None):
             frappe.throw('Customer Warehouse Already Exists')
 
 def sales_invoice_validate(doc, method=None):
+    has_rental_services = any(
+    item.item_name == "Rental Services"
+    for item in (doc.items or [])
+)
+
+    if has_rental_services:
+        return
+
     if not frappe.db.exists('Warehouse', {'custom_is_customer_warehouse': 1}):
         frappe.throw('Customer Warehouse must be set before proceeding')
         
