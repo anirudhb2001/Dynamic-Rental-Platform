@@ -4,8 +4,15 @@ from frappe.utils import now_datetime, get_datetime
 
 @frappe.whitelist(allow_guest=True)
 def send_login_otp(mobile_no):
-    if not mobile_no or len(mobile_no) != 10 or not mobile_no.isdigit():
+    if not mobile_no:
+        return {"success": False, "message": "Please enter a valid mobile number."}
+        
+    mobile_no = mobile_no.strip().replace(" ", "").replace("+", "").replace("-", "")
+    if len(mobile_no) < 10 or not mobile_no.isdigit():
         return {"success": False, "message": "Please enter a valid 10-digit mobile number."}
+    
+    # Check if user is new
+    is_new_user = not frappe.db.exists("User", {"mobile_no": mobile_no})
     
     otp_code = random.randint(1000, 9999)
     
@@ -19,12 +26,14 @@ def send_login_otp(mobile_no):
     # SMS logic mocked
     frappe.msgprint("OTP generated (SMS disabled)")
     
-    return {"success": True, "message": "OTP sent successfully.", "otp_code": otp_code}
+    return {"success": True, "message": "OTP sent successfully.", "otp_code": otp_code, "is_new_user": is_new_user}
 
 @frappe.whitelist(allow_guest=True)
-def verify_login_otp(mobile_no, otp_value):
+def verify_login_otp(mobile_no, otp_value, full_name=None):
     if not mobile_no or not otp_value:
         return {"success": False, "message": "Mobile number and OTP are required."}
+        
+    mobile_no = mobile_no.strip().replace(" ", "").replace("+", "").replace("-", "")
         
     otp_record = frappe.get_all(
         "OTP Verification",
@@ -57,9 +66,10 @@ def verify_login_otp(mobile_no, otp_value):
     user_name = frappe.db.get_value("User", {"mobile_no": mobile_no}, "name")
     
     if not user_name:
+        user_full_name = full_name or "Customer"
         user = frappe.new_doc("User")
         user.email = user_email
-        user.first_name = "Customer"
+        user.first_name = user_full_name
         user.mobile_no = mobile_no
         user.send_welcome_email = 0
         user.insert(ignore_permissions=True)
@@ -69,11 +79,16 @@ def verify_login_otp(mobile_no, otp_value):
     # Get or Create Customer
     customer_name = frappe.db.get_value("Customer", {"mobile_no": mobile_no}, "name")
     if not customer_name:
+        customer_full_name = full_name or "Customer"
         cust = frappe.new_doc("Customer")
-        cust.customer_name = "Customer"
+        cust.customer_name = customer_full_name
+        cust.customer_type = "Individual"
         cust.mobile_no = mobile_no
-        cust.customer_group = "All Customer Groups"
+        cust.custom_alternate_number = mobile_no
+        #cust.customer_group = "All Customer Groups"
         cust.territory = "All Territories"
+        cust.custom_customer_verified = 1
+        cust.custom_verify_alternate_otp = 1
         cust.insert(ignore_permissions=True)
         
     # Create Session

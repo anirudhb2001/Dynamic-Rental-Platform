@@ -20,6 +20,9 @@ function Header({
   companyName,
   logo,
   portalMode,
+  isAuthenticated,
+  handleCustomerLogout,
+  customerDetails,
 }) {
   const [isNavbarVisible, setIsNavbarVisible] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -145,6 +148,29 @@ function Header({
                   </div>
                   <button
                     onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {portalMode === "customer" && isAuthenticated && (
+            <div className="relative ml-2" ref={dropdownRef}>
+              <div onClick={toggleDropdown} className="cursor-pointer">
+                <div className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm uppercase ring-2 ring-transparent hover:ring-primary/30 transition-all shadow-sm">
+                  {getUserInitials(customerDetails?.customer_name || "C")}
+                </div>
+              </div>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 font-medium text-gray-900 bg-gray-50">
+                    {customerDetails?.customer_name || "Customer"}
+                  </div>
+                  <button
+                    onClick={handleCustomerLogout}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     Logout

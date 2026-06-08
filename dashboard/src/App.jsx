@@ -9,6 +9,7 @@ import Toast from "./component/ToastAlerts/Toast.jsx";
 import dayjs from "dayjs";
 import { VITE_AUTHENTICATION } from "../../constants.js";
 import axios from "axios";
+import { customerAuth } from "./services/customerAuth";
 
 import {
   getCustomerDraftQuotations,
@@ -40,7 +41,7 @@ function App() {
   const [pickupDate, setPickupDate] = useState(null);
   const [returnDate, setReturnDate] = useState(null);
   const [actual_returnDate, setActual_ReturnDate] = useState(null);
-  const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [adminSelectedCustomer, setAdminSelectedCustomer] = useState("");
   const [quantities, setQuantities] = useState({});
   const [quotationNames, setQuotationNames] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -82,6 +83,36 @@ function App() {
   const [companyName, setCompanyName] = useState("");
   const [logo, setLogo] = useState("");
   const [brandingData, setBrandingData] = useState({});
+
+  const [authCustomerId, setAuthCustomerId] = useState(customerAuth.getCurrentCustomerId());
+  const [isAuthenticated, setIsAuthenticated] = useState(customerAuth.isCustomerAuthenticated());
+  const [customerDetails, setCustomerDetails] = useState(customerAuth.getCurrentCustomerDetails());
+
+  useEffect(() => {
+    const unsubscribe = customerAuth.subscribeToAuthChanges((state) => {
+      setAuthCustomerId(state.customerId);
+      setIsAuthenticated(state.isAuthenticated);
+      setCustomerDetails(state.customerDetails);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const selectedCustomer = portalMode === "customer" ? authCustomerId : adminSelectedCustomer;
+  const setSelectedCustomer = setAdminSelectedCustomer;
+
+  const handleCustomerLogout = async () => {
+    await customerAuth.logoutCustomer();
+    sessionStorage.clear();
+    setMainCartItems([]);
+    setCartItems([]);
+    setPickupDate(null);
+    setReturnDate(null);
+    setActual_ReturnDate(null);
+    setQuantities({});
+    setQuotationNames([]);
+    settotalAmountCart(0);
+    window.location.href = "/dashboard?mode=customer";
+  };
 
   const hexToRgb = (hex) => {
     if (!hex) return null;
@@ -190,6 +221,33 @@ function App() {
       : { quantity: 0, totalRate: 0 };
   };
 
+  const getCartItemKey = (item) => {
+    const itemId = item.id || item.item_name || item.rental_item_id || item.name || "";
+    const priceList =
+      item.price_list || item.pricelist_name || item.price_list_name || "";
+
+    return `${itemId}::${priceList}`;
+  };
+
+  const mergeCartItemImages = (items, fallbackItems = []) => {
+    const cartImageMap = new Map(
+      [...mainCartItems, ...fallbackItems].map((cartItem) => [
+        getCartItemKey(cartItem),
+        cartItem.image || cartItem.item_image || "",
+      ])
+    );
+
+    return items.map((item) => {
+      const itemKey = getCartItemKey(item);
+
+      return {
+        ...item,
+        image:
+          item.image || item.item_image || cartImageMap.get(itemKey) || "",
+      };
+    });
+  };
+
   const createQuotationHandler = async (items) => {
     const bookingDetails = items.map((item) => {
       const assetData = findMatchingQuantity(item.id, quantities);
@@ -266,7 +324,7 @@ setMainCartItems((prev) => [...prev, ...items]);
               transaction_date: quotation.transaction_date,
             }))
           );
-          setMainCartItems(formattedData);
+          setMainCartItems(mergeCartItemImages(formattedData, items));
 
           if (formattedData.length > 0) {
             setPickupDate(quotations[0].custom_rental_from_date);
@@ -599,7 +657,7 @@ setMainCartItems((prev) => [...prev, ...items]);
               transaction_date: quotation.transaction_date,
             }))
           );
-          setMainCartItems(formattedData);
+          setMainCartItems(mergeCartItemImages(formattedData));
 
           if (formattedData.length > 0) {
             setPickupDate(quotations[0].custom_rental_from_date);
@@ -663,6 +721,9 @@ setMainCartItems((prev) => [...prev, ...items]);
               companyName={companyName}
               logo={logo}
               portalMode={portalMode}
+              isAuthenticated={isAuthenticated}
+              handleCustomerLogout={handleCustomerLogout}
+              customerDetails={customerDetails}
             />
           </div>
 
@@ -670,6 +731,7 @@ setMainCartItems((prev) => [...prev, ...items]);
             <div className="col-span-12 sm:col-span-3">
               {isComponentSidenavVisible && (
                 <SideNav
+                  companyName={companyName}
                   onTabChange={handleTabChange}
                   selectedCategory={selectedCategory}
                   setSelectedCategory={setSelectedCategory}
@@ -810,6 +872,8 @@ setMainCartItems((prev) => [...prev, ...items]);
                   exbookingEntryName={bookingEntryName}
                   salesAvailable={salesAvailable}
                   setQuotationNames={setQuotationNames}
+                  portalMode={portalMode}
+                  fetchData={fetchData}
                 />
               </div>
             )}

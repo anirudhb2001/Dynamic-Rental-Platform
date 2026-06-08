@@ -534,6 +534,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
 
         # If the quotation is not submitted yet, submit it.
         if quotation.docstatus == 0:
+            quotation.flags.ignore_permissions = True
             quotation.submit()
         
         # Proceed with creating the sales order and booking entry
@@ -558,7 +559,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
         if tax_template:
             sales_order.taxes_and_charges = tax_template
             
-        sales_order.run_method("set_missing_values")
+        #sales_order.run_method("set_missing_values")
         sales_order.run_method("calculate_taxes_and_totals")
         
         if is_inclusive_tax:
@@ -625,6 +626,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
 
         # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError
         # sales_order.custom_booking_entry = ", ".join(rental_booking_names)
+        sales_order.flags.ignore_permissions = True
         sales_order.submit()
 
         return {
@@ -844,3 +846,89 @@ def update_cart_dates(customer, custom_rental_from_date, custom_rental_to_date, 
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Update Cart Dates Error")
         return {"error": f"An error occurred: {str(e)}"}
+
+@frappe.whitelist(allow_guest=True)
+def debug_booking():
+    bookings = frappe.db.sql("""
+        SELECT name, asset, booking_status, start_date, end_date, quantity, docstatus 
+        FROM `tabRental Booking`
+        ORDER BY creation DESC LIMIT 5
+    """, as_dict=True)
+    return bookings
+
+@frappe.whitelist(allow_guest=True)
+def debug_assets():
+    assets = frappe.db.sql("""
+        SELECT name, asset_name, custom_stock_qty
+        FROM `tabRental Asset`
+        WHERE name IN ('Honda Activa', 'Steelbird Supra', 'ACTIVA-001', 'SUPRA-001') OR asset_name IN ('Honda Activa', 'Steelbird Supra')
+    """, as_dict=True)
+    return assets
+
+@frappe.whitelist(allow_guest=True)
+def debug_availability():
+    from rental_platform.rental_platform.available_item import get_item_availability
+    return get_item_availability("2026-06-06 10:00:00", "2026-06-07 10:00:00")
+
+@frappe.whitelist(allow_guest=True)
+def debug_availability_print():
+    import json
+    from rental_platform.rental_platform.available_item import get_item_availability
+    res = get_item_availability("2026-06-06 10:00:00", "2026-06-07 10:00:00")
+    print(json.dumps(res, indent=2))
+
+@frappe.whitelist(allow_guest=True)
+def debug_availability_print2():
+    import json
+    from rental_platform.rental_platform.available_item import get_item_availability
+    get_item_availability("2026-06-06 10:00:00", "2026-06-07 10:00:00")
+    print(json.dumps(frappe.response, indent=2))
+
+@frappe.whitelist(allow_guest=True)
+def debug_booking_flow():
+    import json
+    from rental_platform.rental_platform.available_item import get_item_availability
+
+    frappe.response.clear()
+    frappe.response["total items"] = []
+
+    res1 = get_item_availability("2026-06-20 10:00:00", "2026-06-22 10:00:00")
+    print("BEFORE BOOKING:")
+    for x in frappe.response.get("total items", []):
+        if x["item_id"] == "Honda Activa":
+            print(json.dumps(x, indent=2))
+            break
+
+    # Simulate booking
+    rb = frappe.new_doc("Rental Booking")
+    rb.asset = "Honda Activa"
+    rb.booking_status = "Reserved"
+    rb.start_date = "2026-06-20 10:00:00"
+    rb.end_date = "2026-06-21 10:00:00"
+    rb.quantity = 1
+    rb.insert(ignore_permissions=True)
+
+    frappe.response.clear()
+    frappe.response["total items"] = []
+
+    res2 = get_item_availability("2026-06-20 10:00:00", "2026-06-22 10:00:00")
+    print("AFTER BOOKING (same dates):")
+    for x in frappe.response.get("total items", []):
+        if x["item_id"] == "Honda Activa":
+            print(json.dumps(x, indent=2))
+            break
+
+@frappe.whitelist(allow_guest=True)
+def debug_no_dates():
+    import json
+    from rental_platform.rental_platform.available_item import get_item_availability
+
+    frappe.response.clear()
+    frappe.response["total items"] = []
+
+    get_item_availability("", "")
+    print("NO DATES PASSED:")
+    for x in frappe.response.get("total items", []):
+        if x["item_id"] == "Honda Activa":
+            print(json.dumps(x, indent=2))
+            break

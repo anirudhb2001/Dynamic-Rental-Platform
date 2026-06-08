@@ -57,11 +57,12 @@ export const customerAuth = {
     }
   },
 
-  verifyLoginOTP: async (mobileNo, otpValue) => {
+  verifyLoginOTP: async (mobileNo, otpValue, fullName = null) => {
     try {
       const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.verify_login_otp", {
         mobile_no: mobileNo,
         otp_value: otpValue,
+        full_name: fullName,
       });
       
       const data = response.data?.message || response.data;
@@ -96,9 +97,11 @@ export const customerAuth = {
   },
 
   hydrateContext: async () => {
+    console.log("[TRACE] customerAuth.hydrateContext called");
     try {
       const response = await api.get("/api/method/rental_platform.web_api.customer_portal_auth.get_customer_context");
       const data = response.data?.message || response.data;
+      console.log("[TRACE] get_customer_context response:", data);
 
       if (data?.success) {
         authState = {
@@ -115,6 +118,7 @@ export const customerAuth = {
           customerDetails: null,
         };
       }
+      console.log("[TRACE] customerAuth notifying listeners with state:", authState);
       notifyListeners();
       return authState;
     } catch (error) {

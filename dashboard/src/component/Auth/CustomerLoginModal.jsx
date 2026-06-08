@@ -8,6 +8,8 @@ const CustomerLoginModal = ({ onClose, onSuccess }) => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [fullName, setFullName] = useState("");
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -22,6 +24,7 @@ const CustomerLoginModal = ({ onClose, onSuccess }) => {
     setLoading(false);
     
     if (response.success) {
+      setIsNewUser(response.is_new_user || false);
       setStep(2);
     } else {
       setError(response.message || "Failed to send OTP.");
@@ -34,10 +37,14 @@ const CustomerLoginModal = ({ onClose, onSuccess }) => {
       setError("Please enter a valid OTP.");
       return;
     }
+    if (isNewUser && !fullName.trim()) {
+      setError("Please enter your full name to register.");
+      return;
+    }
     setError("");
     setLoading(true);
     
-    const response = await customerAuth.verifyLoginOTP(mobileNo, otp);
+    const response = await customerAuth.verifyLoginOTP(mobileNo, otp, fullName.trim() || null);
     setLoading(false);
     
     if (response.success) {
@@ -108,6 +115,22 @@ const CustomerLoginModal = ({ onClose, onSuccess }) => {
             </form>
           ) : (
             <form onSubmit={handleVerifyOTP} className="space-y-4">
+              {isNewUser && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Full Name (Required for new registration)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all text-slate-900 font-medium"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   One Time Password
@@ -137,6 +160,7 @@ const CustomerLoginModal = ({ onClose, onSuccess }) => {
                   onClick={() => {
                     setStep(1);
                     setOtp("");
+                    setFullName("");
                     setError("");
                   }}
                   className="text-sm text-slate-500 hover:text-slate-800 transition-colors"

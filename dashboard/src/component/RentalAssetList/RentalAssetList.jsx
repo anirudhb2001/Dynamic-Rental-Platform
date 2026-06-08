@@ -98,10 +98,19 @@ const RentalAssetList = ({
 
   useEffect(() => {
     const unsubscribe = customerAuth.subscribeToAuthChanges((state) => {
+      console.log("[TRACE: RentalAssetList.jsx] Received auth state change. isAuthenticated:", state.isAuthenticated);
       setIsAuthenticated(state.isAuthenticated);
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    console.log("[TRACE: RentalAssetList.jsx] Rendering with:", {
+      portalMode,
+      isAuthenticated,
+      selectedCustomer
+    });
+  }, [portalMode, isAuthenticated, selectedCustomer]);
 
   useEffect(() => {
     const initialStockQty = {};
@@ -731,9 +740,9 @@ const RentalAssetList = ({
             </section>
           ) : (
             <>
-              <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-slate-100 bg-white/85 p-3 shadow-soft backdrop-blur-xl">
+              <section className="relative z-20 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-slate-100 bg-white/85 p-3 shadow-soft backdrop-blur-xl">
                 <div className="flex flex-1 items-center gap-2 flex-wrap rent-options-container">
-              <div className="relative inline-block text-left">
+              <div className="relative z-30 inline-block text-left">
                 <button
                   className={`flex items-center justify-center px-4 py-2 text-xs rounded-full gap-1.5 transition-all duration-300 shadow-sm ${
                     isSortActive || sortOption
@@ -748,7 +757,7 @@ const RentalAssetList = ({
                 </button>
 
                 {isSortActive && (
-                  <div className="absolute mt-2 w-40 rounded-2xl shadow-lg bg-white/95 backdrop-blur-xl border border-slate-100 z-20 overflow-hidden">
+                  <div className="absolute mt-2 w-40 rounded-2xl shadow-lg bg-white/95 backdrop-blur-xl border border-slate-100 z-[9999] overflow-visible">
                     <div className="py-2 text-xs text-slate-700">
                       <button
                         className={`block px-4 py-2 w-full text-left transition-colors ${
@@ -1021,28 +1030,37 @@ const RentalAssetList = ({
                                   {asset.price}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                disabled={getAssetStatus(asset) !== "available"}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  console.log("BOOK CLICKED", asset);
-                                  if (portalMode === "customer" && !isAuthenticated) {
-                                    setIsAuthModalOpen(true);
-                                  } else if (!forceAvailable) {
-                                    openModal(asset);
+                                <button
+                                  type="button"
+                                  disabled={
+                                    getAssetStatus(asset) !== "available" || 
+                                    (portalMode === "customer" && isAuthenticated && !selectedCustomer)
                                   }
-                                }}
-                                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-black text-white shadow-md transition-all ${
-                                  getAssetStatus(asset) !== "available"
-                                    ? "bg-slate-300 shadow-none cursor-not-allowed"
-                                    : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-hover"
-                                }`}
-                              >
-                                {portalMode === "customer" 
-                                  ? (getAssetStatus(asset) === "available" ? (isAuthenticated ? "Book Now" : "Login to Book") : "Currently Unavailable") 
-                                  : "Book Now"}
-                              </button>
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    console.log("BOOK CLICKED", asset);
+                                    if (portalMode === "customer" && !isAuthenticated) {
+                                      setIsAuthModalOpen(true);
+                                    } else if (portalMode === "customer" && isAuthenticated && !selectedCustomer) {
+                                      addToast("Loading customer profile, please wait...", "info");
+                                    } else if (!forceAvailable) {
+                                      openModal(asset);
+                                    }
+                                  }}
+                                  className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-black text-white shadow-md transition-all ${
+                                    getAssetStatus(asset) !== "available" || (portalMode === "customer" && isAuthenticated && !selectedCustomer)
+                                      ? "bg-slate-300 shadow-none cursor-not-allowed"
+                                      : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-hover"
+                                  }`}
+                                >
+                                  {portalMode === "customer" 
+                                    ? (getAssetStatus(asset) === "available" 
+                                        ? (isAuthenticated 
+                                            ? (selectedCustomer ? "Book Now" : "Loading profile...") 
+                                            : "Login to Book") 
+                                        : "Currently Unavailable") 
+                                    : "Book Now"}
+                                </button>
                             </div>
                           </div>
                         </div>

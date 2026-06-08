@@ -2,6 +2,9 @@
 import frappe
 @frappe.whitelist(allow_guest=True)
 def update_additional_discount(quotation_name, additional_discount_percentage=None, additional_discount_amount=None):
+    if "Rental Customer" in frappe.get_roles(frappe.session.user):
+        frappe.throw("Customers are not allowed to apply manual discounts.")
+
     quotation = frappe.get_doc("Quotation", quotation_name)
 
     if quotation.docstatus != 0:

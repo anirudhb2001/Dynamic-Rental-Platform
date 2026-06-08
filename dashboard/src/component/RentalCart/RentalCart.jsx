@@ -18,6 +18,7 @@ import {
 } from "../../services/api.jsx";
 import ConfirmCheckoutModal from "../ConfirmationModal/ConfirmCheckoutModal.jsx";
 import QuotationSubmitModal from "../ConfirmationModal/QuotationSubmitModal.jsx";
+
 import {
   VITE_PUBLIC_REDIRECT_URL,
   VITE_PUBLIC_SINGLE_CART,
@@ -35,6 +36,8 @@ function RentalCart({
   exbookingEntryName,
   salesAvailable,
   setQuotationNames,
+  portalMode,
+  fetchData,
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -60,6 +63,7 @@ function RentalCart({
   const [timer, setTimer] = useState(0);
   const timerRef = useRef(null);
   const [isInclusiveTax, setIsInclusiveTax] = useState(false);
+
 
   // API Functionalities.
 
@@ -126,8 +130,12 @@ function RentalCart({
 
         const salesOrderName = submitResponse.message.sales_order_name;
         if (salesOrderName) {
-          const redirectUrl = `${VITE_PUBLIC_REDIRECT_URL}/${salesOrderName}`;
-          window.location.href = redirectUrl;
+          if (portalMode === "customer") {
+            addToast(`Booking placed successfully! Your order ID is: ${salesOrderName}`, "success");
+          } else {
+            const redirectUrl = `${VITE_PUBLIC_REDIRECT_URL}/${salesOrderName}`;
+            window.location.href = redirectUrl;
+          }
         } else {
           addToast("Sales order name not found in the response.", "error");
         }
@@ -225,10 +233,15 @@ function RentalCart({
           // const salesOrderName = extendResponse.message.sales_order_name;
           const salesInvoiceName = extendResponse.message.sales_invoice_name; //redirect to sales invoice
           if (salesInvoiceName) {
-            const redirectUrl = `${VITE_PUBLIC_SALE_INVOICE_URL}/${salesInvoiceName}`;
-            window.location.href = redirectUrl;
+            if (portalMode === "customer") {
+              addToast(`Booking extended successfully! Invoice ID is: ${salesInvoiceName}`, "success");
+              if (fetchData) fetchData();
+            } else {
+              const redirectUrl = `${VITE_PUBLIC_SALE_INVOICE_URL}/${salesInvoiceName}`;
+              window.location.href = redirectUrl;
+            }
           } else {
-            addToast("Sales order name not found in the response.", "error");
+            addToast("Sales invoice name not found in the response.", "error");
           }
         } catch (error) {
           addToast(
@@ -257,8 +270,13 @@ function RentalCart({
             const salesOrderName = submitResponse.message.sales_order_name;
             // const salesInvoiceName = submitResponse.message.sales_invoice_name;
             if (salesOrderName) {
-              const redirectUrl = `${VITE_PUBLIC_REDIRECT_URL}/${salesOrderName}`;
-              window.location.href = redirectUrl;
+              if (portalMode === "customer") {
+                addToast(`Booking placed successfully! Your order ID is: ${salesOrderName}`, "success");
+                if (fetchData) fetchData();
+              } else {
+                const redirectUrl = `${VITE_PUBLIC_REDIRECT_URL}/${salesOrderName}`;
+                window.location.href = redirectUrl;
+              }
             } else {
               addToast("Sales order name not found in the response.", "error");
             }
@@ -661,7 +679,11 @@ function RentalCart({
               >
                 <div className="flex items-center p-0 border border-gray-100 rounded-xl mb-2 w-full h-[70px] shadow-sm bg-white overflow-hidden">
                   <div className="bg-gray-50 flex items-center justify-center max-w-[100px] w-full h-full border-r border-gray-100 mr-2.5">
-                    <img src={item.image} className="w-auto max-h-[60px]" />
+                    <img
+                      src={item.image || item.item_image || ""}
+                      className="w-auto max-h-[60px]"
+                      alt={item.item_name || item.name || "Cart item"}
+                    />
                   </div>
                   <div className="flex flex-col items-start text-[11px] text-[#333] pl-0 w-full">
                     <div className="flex justify-between w-full items-start">
@@ -820,83 +842,87 @@ function RentalCart({
       </div>
       <div className="mt-4 border border-gray-200 shadow-sm p-4 rounded-xl bg-white max-h-96 overflow-y-auto">
         <div className="grid grid-cols-1 gap-3">
-          <h5 className="text-black text-sm md:text-base">Discount Amount</h5>
-          <div className="flex relative">
-            <input
-              type="number"
-              min="0"
-              className={`bg-white border border-gray-200 shadow-sm h-10 py-2 px-7 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${
-                !useAmount || !quotationNames[0]
-                  ? "bg-gray-50 opacity-60 cursor-not-allowed"
-                  : ""
-              }`}
-              placeholder="0.00"
-              value={additionalDiscountAmount}
-              disabled={!useAmount || !quotationNames[0]}
-              onFocus={() => setAddPercentage(true)}
-              onBlur={() => setAddPercentage(false)}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (Number(value) >= 0) {
-                  setadditionalDiscountAmount(value);
-                }
-              }}
-            />
+          {portalMode !== "customer" && (
+            <>
+              <h5 className="text-black text-sm md:text-base">Discount Amount</h5>
+              <div className="flex relative">
+                <input
+                  type="number"
+                  min="0"
+                  className={`bg-white border border-gray-200 shadow-sm h-10 py-2 px-7 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${
+                    !useAmount || !quotationNames[0]
+                      ? "bg-gray-50 opacity-60 cursor-not-allowed"
+                      : ""
+                  }`}
+                  placeholder="0.00"
+                  value={additionalDiscountAmount}
+                  disabled={!useAmount || !quotationNames[0]}
+                  onFocus={() => setAddPercentage(true)}
+                  onBlur={() => setAddPercentage(false)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (Number(value) >= 0) {
+                      setadditionalDiscountAmount(value);
+                    }
+                  }}
+                />
 
-            <input
-              type="checkbox"
-              checked={useAmount}
-              onClick={handleAmountCheckboxChange}
-              disabled={!quotationNames[0]}
-              className="absolute accent-primary left-3 top-3 w-4 h-4 cursor-pointer"
-            />
-          </div>
+                <input
+                  type="checkbox"
+                  checked={useAmount}
+                  onClick={handleAmountCheckboxChange}
+                  disabled={!quotationNames[0]}
+                  className="absolute accent-primary left-3 top-3 w-4 h-4 cursor-pointer"
+                />
+              </div>
 
-          <h5 className="text-black text-sm md:text-base">
-            Discount Percentage
-          </h5>
+              <h5 className="text-black text-sm md:text-base">
+                Discount Percentage
+              </h5>
 
-          <div className="flex relative">
-            <input
-              type="number"
-              className={`bg-white border border-gray-200 shadow-sm h-10 py-2 px-7 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${
-                !usePercentage || !quotationNames[0]
-                  ? "bg-gray-50 opacity-60 cursor-not-allowed"
-                  : ""
-              }`}
-              placeholder="0.00"
-              min="0"
-              value={additionalDiscountPercentage}
-              disabled={!usePercentage || !quotationNames[0]}
-              onFocus={() => setAddDiscount(true)}
-              onBlur={() => setAddDiscount(false)}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (Number(value) >= 0) {
-                  setadditionalDiscountPercentage(value);
-                }
-              }}
-            />
-            <input
-              type="checkbox"
-              disabled={!quotationNames[0]}
-              checked={usePercentage}
-              onChange={handlePercentageCheckboxChange}
-              className="absolute accent-primary left-3 top-3 w-4 h-4 cursor-pointer"
-            />
-          </div>
+              <div className="flex relative">
+                <input
+                  type="number"
+                  className={`bg-white border border-gray-200 shadow-sm h-10 py-2 px-7 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${
+                    !usePercentage || !quotationNames[0]
+                      ? "bg-gray-50 opacity-60 cursor-not-allowed"
+                      : ""
+                  }`}
+                  placeholder="0.00"
+                  min="0"
+                  value={additionalDiscountPercentage}
+                  disabled={!usePercentage || !quotationNames[0]}
+                  onFocus={() => setAddDiscount(true)}
+                  onBlur={() => setAddDiscount(false)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (Number(value) >= 0) {
+                      setadditionalDiscountPercentage(value);
+                    }
+                  }}
+                />
+                <input
+                  type="checkbox"
+                  disabled={!quotationNames[0]}
+                  checked={usePercentage}
+                  onChange={handlePercentageCheckboxChange}
+                  className="absolute accent-primary left-3 top-3 w-4 h-4 cursor-pointer"
+                />
+              </div>
 
-          <button
-            onClick={handleApplyDiscount}
-            className={`mt-2 px-2 w-full py-2.5 font-medium rounded-lg transition-colors ${
-              !quotationNames[0]
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-primary text-white cursor-pointer hover:bg-primary-hover shadow-md"
-            }`}
-            disabled={!quotationNames[0]}
-          >
-            Apply Discount
-          </button>
+              <button
+                onClick={handleApplyDiscount}
+                className={`mt-2 px-2 w-full py-2.5 font-medium rounded-lg transition-colors ${
+                  !quotationNames[0]
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-primary text-white cursor-pointer hover:bg-primary-hover shadow-md"
+                }`}
+                disabled={!quotationNames[0]}
+              >
+                Apply Discount
+              </button>
+            </>
+          )}
           <div
             className={`bg-gray-50 border border-gray-200 h-10 p-2 rounded-lg w-full flex items-center`}
           >
@@ -911,83 +937,80 @@ function RentalCart({
             </span>
           </div>
 
-          <h5 className="text-black text-sm md:text-base">Delivery Boy</h5>
-          <div className="relative">
-            <button
-              onClick={() => setShowCustomDropdown(!showCustomDropdown)}
-              className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full flex items-center justify-between hover:border-primary/50 transition-colors"
-              placeholder="Select a delivery boy"
-            >
-              <span className="text-gray-700 text-sm">
-                {selectedSalesPerson || "Select a delivery boy"}
-              </span>
-              <PiCaretUpDownLight className="text-gray-400" />
-            </button>
+          {portalMode !== "customer" && (
+            <>
+              <h5 className="text-black text-sm md:text-base">Delivery Boy</h5>
+              <div className="relative">
+                <button
+                  onClick={() => setShowCustomDropdown(!showCustomDropdown)}
+                  className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full flex items-center justify-between hover:border-primary/50 transition-colors"
+                  placeholder="Select a delivery boy"
+                >
+                  <span className="text-gray-700 text-sm">
+                    {selectedSalesPerson || "Select a delivery boy"}
+                  </span>
+                  <PiCaretUpDownLight className="text-gray-400" />
+                </button>
 
-            {showCustomDropdown && (
-              <div className="mt-2 space-y-2">
-                {loading ? (
-                  <div className="text-gray-400 text-sm">Loading...</div>
-                ) : error ? (
-                  <div className="text-red-500 text-sm">{error}</div>
-                ) : salesPersons.length > 0 ? (
-                  salesPersons.map((person, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 bg-white border border-gray-100 hover:bg-gray-50 rounded-lg shadow-sm p-3 cursor-pointer transition-colors"
-                      onClick={() => {
-                        setSelectedSalesPerson(person.sales_person_name);
-                        setShowCustomDropdown(false);
-                      }}
-                    >
-                      <IoMdPerson className="text-gray-500 text-lg" />
-                      <span className="text-gray-800 font-medium text-sm">
-                        {person.sales_person_name}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-gray-400 text-sm">
-                    No sales persons found.
+                {showCustomDropdown && (
+                  <div className="mt-2 space-y-2">
+                    {loading ? (
+                      <div className="text-gray-400 text-sm">Loading...</div>
+                    ) : error ? (
+                      <div className="text-red-500 text-sm">{error}</div>
+                    ) : salesPersons.length > 0 ? (
+                      salesPersons.map((person, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 bg-white border border-gray-100 hover:bg-gray-50 rounded-lg shadow-sm p-3 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setSelectedSalesPerson(person.sales_person_name);
+                            setShowCustomDropdown(false);
+                          }}
+                        >
+                          <IoMdPerson className="text-gray-500 text-lg" />
+                          <span className="text-gray-800 font-medium text-sm">
+                            {person.sales_person_name}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-400 text-sm">
+                        No sales persons found.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-          <input
-            type="text"
-            className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-            placeholder="Delivery Charges"
-          />
-          <input
-            type="text"
-            className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-            placeholder="Tax"
-            // value={`Tax: ${
-            //   totalAmountCart?.length
-            //     ? totalAmountCart.reduce((acc, item) => item.tax || 0, 0)
-            //     : 0
-            //   // ? mainCartItems.reduce((acc, item) => item.total || 0, 0)
-            //   // : 0
-            // }`}
-          />
-          {!salesAvailable && (
-            <div className="flex items-center gap-2 mt-2">
               <input
-                type="checkbox"
-                id="inclusiveTax"
-                checked={isInclusiveTax}
-                onChange={(e) => setIsInclusiveTax(e.target.checked)}
-                className="accent-primary w-4 h-4 cursor-pointer"
+                type="text"
+                className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                placeholder="Delivery Charges"
               />
+              <input
+                type="text"
+                className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                placeholder="Tax"
+              />
+              {!salesAvailable && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="inclusiveTax"
+                    checked={isInclusiveTax}
+                    onChange={(e) => setIsInclusiveTax(e.target.checked)}
+                    className="accent-primary w-4 h-4 cursor-pointer"
+                  />
 
-              <label
-                htmlFor="inclusiveTax"
-                className="text-sm text-gray-700 font-medium"
-              >
-                Inclusive Tax
-              </label>
-            </div>
+                  <label
+                    htmlFor="inclusiveTax"
+                    className="text-sm text-gray-700 font-medium"
+                  >
+                    Inclusive Tax
+                  </label>
+                </div>
+              )}
+            </>
           )}
         </div>
 
