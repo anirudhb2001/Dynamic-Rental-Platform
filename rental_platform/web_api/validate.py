@@ -80,27 +80,47 @@ def validate_customer_verification(doc, method=None):
 def get_user_default_warehouse():
     try:
         user = frappe.session.user
-        
+
+        # Customer logout ചെയ്താൽ user = Guest
+        if not user or user == "Guest":
+            return {"warehouse_name": None}
+
         default_warehouse = frappe.db.get_value(
             "User Permission",
-            {"user": user, "allow": "Warehouse", "is_default": 1},
+            {
+                "user": user,
+                "allow": "Warehouse",
+                "is_default": 1
+            },
             "for_value"
         )
 
         if default_warehouse:
             return {"warehouse_name": default_warehouse}
-        
+
         permitted_warehouses = frappe.get_all(
             "User Permission",
-            filters={"user": user, "allow": "Warehouse"},
+            filters={
+                "user": user,
+                "allow": "Warehouse"
+            },
             pluck="for_value"
         )
 
         if permitted_warehouses:
-            return [{"warehouse_name": warehouse} for warehouse in permitted_warehouses]
+            return [
+                {"warehouse_name": warehouse}
+                for warehouse in permitted_warehouses
+            ]
 
-        return None
+        return {"warehouse_name": None}
 
     except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "Get User Warehouse Error")
-        return {"error": f"An error occurred: {str(e)}"}
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Get User Warehouse Error"
+        )
+        return {
+            "warehouse_name": None,
+            "error": str(e)
+        }

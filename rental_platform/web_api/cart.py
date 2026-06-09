@@ -622,6 +622,39 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
             rental_booking.stock_quantity = item.stock_quantity
             
             rental_booking.insert(ignore_permissions=True)
+
+            # --- Notification Trigger: Admin Booking ---
+            try:
+                from rental_platform.web_api.notification import create_admin_notification, create_notification
+                create_admin_notification(
+                    title="New Booking",
+                    message=f"{quotation.party_name} booked {item.item_name}",
+                    notification_type="Booking",
+                    reference_doctype="Rental Booking",
+                    reference_name=rental_booking.name,
+                    priority="High",
+                )
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "Admin Booking Notification Error")
+
+            # --- Notification Trigger: Customer Booking Confirmation ---
+            try:
+                from rental_platform.web_api.notification import create_notification
+                customer_mobile = frappe.db.get_value("Customer", quotation.party_name, "mobile_no")
+                customer_user = frappe.db.get_value("User", {"mobile_no": customer_mobile}, "name") if customer_mobile else None
+                create_notification(
+                    title="Booking Confirmed",
+                    message=f"Your booking for {item.item_name} has been confirmed",
+                    notification_type="Booking Confirmation",
+                    customer=quotation.party_name,
+                    user=customer_user,
+                    reference_doctype="Rental Booking",
+                    reference_name=rental_booking.name,
+                    priority="High",
+                )
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "Customer Booking Notification Error")
+
             rental_booking_names.append(rental_booking.name)
 
         # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError

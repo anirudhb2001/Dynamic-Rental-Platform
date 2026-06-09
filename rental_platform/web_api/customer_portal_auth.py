@@ -90,6 +90,18 @@ def verify_login_otp(mobile_no, otp_value, full_name=None):
         cust.custom_customer_verified = 1
         cust.custom_verify_alternate_otp = 1
         cust.insert(ignore_permissions=True)
+
+        # --- Notification Trigger: New Customer Registration ---
+        try:
+            from rental_platform.web_api.notification import create_admin_notification
+            create_admin_notification(
+                title="New Customer Registered",
+                message=f"{customer_full_name} registered successfully",
+                notification_type="Customer Registration",
+                priority="Medium",
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Customer Registration Notification Error")
         
     # Create Session
     from frappe.auth import LoginManager

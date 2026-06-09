@@ -26,3 +26,4 @@ export const VITE_PUBLIC_SALE_INVOICE_LINK = `${VITE_BACKEND_URL}/app/sales-invo
 export const VITE_PUBLIC_PAYMENT_ENTRY_LINK = `${VITE_BACKEND_URL}/app/payment-entry`
 export const VITE_PUBLIC_CREATE_PAYMENT_ENTRY = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.return_payment`;
 export const VITE_PUBLIC_ITEM_WAREHOUSE = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.validate`;
+export const VITE_PUBLIC_NOTIFICATION_URL = `${VITE_BACKEND_URL}/api/method/rental_platform.web_api.notification`;

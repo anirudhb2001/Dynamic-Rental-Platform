@@ -7,14 +7,14 @@
  "engine": "InnoDB",
  "field_order": [
   "company_name",
+  "asset_label",
   "logo",
   "primary_color",
   "secondary_color",
   "website",
   "support_email",
   "hero_title",
-  "hero_subtitle",
-  "asset_label"
+  "hero_subtitle"
  ],
  "fields": [
   {
@@ -68,7 +68,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-03 14:13:18.565213",
+ "modified": "2026-06-08 17:51:31.200510",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Branding Settings",

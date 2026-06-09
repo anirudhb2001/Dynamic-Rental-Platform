@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FaSearch, FaBars, FaRegBell } from "react-icons/fa";
+import NotificationDropdown from "./NotificationDropdown";
 import { CiSearch } from "react-icons/ci";
 import { PiCaretDownBold, PiDesk } from "react-icons/pi";
 import {
@@ -108,11 +109,7 @@ function Header({
             <span>Search</span>
           </button>
           
-          <button className="hidden lg:flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors text-sm font-medium relative">
-            <FaRegBell className="h-4 w-4" />
-            <span>Notifications</span>
-            <span className="absolute -top-1 -right-2 h-2 w-2 bg-primary rounded-full"></span>
-          </button>
+          <NotificationDropdown portalMode={portalMode} />
 
           {portalMode !== "customer" && (
             <a
