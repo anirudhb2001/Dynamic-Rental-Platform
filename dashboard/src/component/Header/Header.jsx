@@ -109,7 +109,12 @@ function Header({
             <span>Search</span>
           </button>
           
-          <NotificationDropdown portalMode={portalMode} />
+          {(portalMode !== "customer" || (portalMode === "customer" && isAuthenticated)) && (
+            <NotificationDropdown 
+              portalMode={portalMode} 
+              isAuthenticated={portalMode === "customer" ? isAuthenticated : true} 
+            />
+          )}
 
           {portalMode !== "customer" && (
             <a

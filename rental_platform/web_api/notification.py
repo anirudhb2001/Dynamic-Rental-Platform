@@ -123,6 +123,9 @@ def get_notifications():
     1. Notifications where `user` matches the logged-in user.
     2. Notifications where `customer` matches the linked Customer record.
     """
+    if frappe.session.user == "Guest":
+        return []
+
     or_filters = _get_notification_filters()
 
     notifications = frappe.get_all(
@@ -149,6 +152,9 @@ def get_notifications():
 @frappe.whitelist()
 def get_unread_count():
     """Return the count of unread notifications for the current user."""
+    if frappe.session.user == "Guest":
+        return {"count": 0}
+
     or_filters = _get_notification_filters()
 
     results = frappe.get_all(
@@ -170,6 +176,23 @@ def mark_notification_read(notification_name):
 
     if not frappe.db.exists("Rental Notification", notification_name):
         frappe.throw(_("Notification not found."))
+
+    notification = frappe.get_doc("Rental Notification", notification_name)
+    current_user = frappe.session.user
+    
+    # Ownership verification
+    is_owner = False
+    if notification.user == current_user:
+        is_owner = True
+    elif notification.customer:
+        mobile_no = frappe.db.get_value("User", current_user, "mobile_no")
+        if mobile_no:
+            customer_name = frappe.db.get_value("Customer", {"mobile_no": mobile_no}, "name")
+            if customer_name and notification.customer == customer_name:
+                is_owner = True
+
+    if not is_owner:
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
 
     frappe.db.set_value(
         "Rental Notification",

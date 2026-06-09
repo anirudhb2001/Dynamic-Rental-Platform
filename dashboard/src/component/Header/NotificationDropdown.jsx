@@ -9,7 +9,7 @@ import { VITE_PUBLIC_NOTIFICATION_URL } from "../../../../constants";
  * Props:
  *   portalMode  — "customer" | "admin" (controls click-through behavior)
  */
-function NotificationDropdown({ portalMode }) {
+function NotificationDropdown({ portalMode, isAuthenticated }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +18,7 @@ function NotificationDropdown({ portalMode }) {
   // ---- Data Fetching ----
 
   const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const res = await axios.get(
         `${VITE_PUBLIC_NOTIFICATION_URL}.get_notifications`,
@@ -28,9 +29,10 @@ function NotificationDropdown({ portalMode }) {
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const res = await axios.get(
         `${VITE_PUBLIC_NOTIFICATION_URL}.get_unread_count`,
@@ -41,10 +43,11 @@ function NotificationDropdown({ portalMode }) {
     } catch (err) {
       console.error("Failed to fetch unread count:", err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Initial fetch + 30-second polling
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchUnreadCount();
 
     const interval = setInterval(() => {
@@ -52,7 +55,7 @@ function NotificationDropdown({ portalMode }) {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, isAuthenticated]);
 
   // Fetch full list when dropdown opens
   useEffect(() => {
