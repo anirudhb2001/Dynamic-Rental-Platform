@@ -10,7 +10,10 @@
   "section_break_qyno",
   "warehouse",
   "column_break_znph",
-  "overdue_check"
+  "overdue_check",
+  "late_fee_item",
+  "damage_charge_item",
+  "grace_period_hours"
  ],
  "fields": [
   {
@@ -43,6 +46,24 @@
    "fieldname": "overdue_check",
    "fieldtype": "Check",
    "label": "Rental Return Overdue Check"
+  },
+  {
+   "fieldname": "late_fee_item",
+   "fieldtype": "Link",
+   "label": "Late Fee Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "damage_charge_item",
+   "fieldtype": "Link",
+   "label": "Damage Charge Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "grace_period_hours",
+   "fieldtype": "Int",
+   "label": "Grace Period (Hours)",
+   "default": "0"
   }
  ],
  "index_web_pages_for_search": 1,

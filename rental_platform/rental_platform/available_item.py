@@ -75,7 +75,7 @@ def get_item_availability(start_datetime=None, end_datetime=None):
         booked = float(booked_qty_map.get(asset.item_id, 0))
         available = max(0, stock - booked)
         
-        # Priority Logic
+        # Priority Logic for overall asset status
         if asset.asset_status == "Maintenance":
             status = "Maintenance"
             available = 0 # Force available to 0 if maintenance
@@ -90,16 +90,23 @@ def get_item_availability(start_datetime=None, end_datetime=None):
             else:
                 status = "Unavailable"
                 
-        # KPIs tracking based on determined status
-        if status == "Maintenance":
-            kpis["maintenance"] += 1
-        elif status == "Available":
+        # KPIs tracking (Independent Counters)
+        
+        if available > 0:
             kpis["available"] += 1
-        elif status == "On Ride":
-            kpis["onRide"] += 1
-        elif status == "Reserved":
+            
+        statuses = booked_statuses_map.get(asset.item_id, set())
+        
+        if "Reserved" in statuses:
             kpis["reserved"] += 1
-        elif status == "Unavailable":
+            
+        if "Picked Up" in statuses or "On Ride" in statuses:
+            kpis["onRide"] += 1
+            
+        if asset.asset_status == "Maintenance":
+            kpis["maintenance"] += 1
+            
+        if available <= 0 and asset.asset_status != "Maintenance" and not ("Reserved" in statuses or "Picked Up" in statuses or "On Ride" in statuses):
             kpis["unavailable"] += 1
             
         total_items_status.append({

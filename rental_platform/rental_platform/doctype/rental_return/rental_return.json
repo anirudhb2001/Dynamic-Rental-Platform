@@ -11,7 +11,16 @@
   "return_date",
   "damage_found",
   "damage_cost",
-  "remarks"
+  "remarks",
+  "customer",
+  "asset",
+  "rental_from_date",
+  "rental_to_date",
+  "late_days",
+  "late_fee",
+  "total_additional_charge",
+  "sales_invoice",
+  "return_processed_by"
  ],
  "fields": [
   {
@@ -44,6 +53,60 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Rental Asset"
+  },
+  {
+   "fieldname": "rental_from_date",
+   "fieldtype": "Datetime",
+   "label": "Rental From Date"
+  },
+  {
+   "fieldname": "rental_to_date",
+   "fieldtype": "Datetime",
+   "label": "Rental To Date"
+  },
+  {
+   "fieldname": "late_days",
+   "fieldtype": "Int",
+   "label": "Late Days",
+   "default": "0"
+  },
+  {
+   "fieldname": "late_fee",
+   "fieldtype": "Currency",
+   "label": "Late Fee",
+   "default": "0"
+  },
+  {
+   "fieldname": "total_additional_charge",
+   "fieldtype": "Currency",
+   "label": "Total Additional Charge",
+   "default": "0"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "return_processed_by",
+   "fieldtype": "Link",
+   "label": "Return Processed By",
+   "options": "User",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

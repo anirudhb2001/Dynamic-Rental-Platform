@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { UserIcon, CalendarIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import ReturnOrderPopup from "./ReturnOrderPopup/ReturnOrderPopup";
+import RentalBookingReturnPopup from "./RentalBookingReturnPopup";
 
 const Card = ({
   id,
@@ -20,6 +21,7 @@ const Card = ({
   formatDate,
   fetchData,
   securityDocumentStatus, // ✅ പുതിയ prop
+  isRentalBooking,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [initialTab, setInitialTab] = useState("return");
@@ -129,22 +131,36 @@ const Card = ({
           </div>
         )}
 
-        <ReturnOrderPopup
-          show={modalOpen}
-          onClose={() => setModalOpen(false)}
-          rentalItems={rentalItems}
-          id={id}
-          date={date}
-          addToast={addToast}
-          onRedirectToRentalAssetList={onRedirectToRentalAssetList}
-          toDate={toDate}
-          setToDate={setToDate}
-          closeReturnModal={closeReturnModal}
-          isBookingReturned={isBookingReturned}
-          formatDate={formatDate}
-          fetchData={fetchData}
-          initialTab={initialTab}
-        />
+        
+        {isRentalBooking ? (
+          <RentalBookingReturnPopup
+            show={modalOpen}
+            onClose={() => setModalOpen(false)}
+            bookingId={id}
+            customer={customer}
+            itemName={itemName}
+            addToast={addToast}
+            fetchData={fetchData}
+          />
+        ) : (
+          <ReturnOrderPopup
+            show={modalOpen}
+            onClose={() => setModalOpen(false)}
+            rentalItems={rentalItems}
+            id={id}
+            date={date}
+            addToast={addToast}
+            onRedirectToRentalAssetList={onRedirectToRentalAssetList}
+            toDate={toDate}
+            setToDate={setToDate}
+            closeReturnModal={closeReturnModal}
+            isBookingReturned={isBookingReturned}
+            formatDate={formatDate}
+            fetchData={fetchData}
+            initialTab={initialTab}
+          />
+        )}
+
       </div>
     </div>
   );

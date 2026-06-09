@@ -3,6 +3,7 @@ import Card from "./Card";
 import {
   getBeWithFinancialDetails,
   getBookingEntryStatus,
+  getReturnableBookings
 } from "../services/api";
 import Pagination from "./Pagination/Pagination.jsx";
 import dayjs from "dayjs";
@@ -23,6 +24,8 @@ const CardList = ({
   formatDate,
   fetchData,
 }) => {
+  
+  const [returnViewType, setReturnViewType] = useState("rental_booking"); // "rental_booking" or "booking_entry"
   const [toDate, setToDate] = useState(null);
   const itemsPerPage = 12;
   const [sortOrder, setSortOrder] = useState("newest");
@@ -41,55 +44,86 @@ const CardList = ({
       try {
         setIsLoading(true);
 
-        const [BookingData, bookingStatusData] = await Promise.all([
-          getBeWithFinancialDetails(),
-          getBookingEntryStatus(),
-        ]);
+        if (returnViewType === "booking_entry") {
+          const [BookingData, bookingStatusData] = await Promise.all([
+            getBeWithFinancialDetails(),
+            getBookingEntryStatus(),
+          ]);
 
-        const bookingStatusMap = new Map(
-          bookingStatusData.booking_entries.map((entry) => [
-            entry.name,
-            entry.status,
-          ])
-        );
-
-        const formattedBookingData = (BookingData || [])
-          .map((booking_detail) => {
-            const rentalItems = booking_detail.rental_items.map((item) => ({
-              ...item,
-              isReturned: item.returned_item === 1,
-            }));
-
-            return {
-              id: booking_detail.booking_entry,
-              status: ["Returned", "Partially Returned"].includes(
-                booking_detail.booking_status
-              )
-                ? booking_detail.booking_status
-                : booking_detail.date_status,
-              customer_data: booking_detail.customer,
-              date: new Date(booking_detail.actual_to_date),
-              totalPrice: booking_detail.total_agreement_amount,
-              advanceAmount: booking_detail.amount_received,
-              balanceAmount: booking_detail.pending_amount,
-              itemName: booking_detail.rental_items[0]?.item_name,
-              rentalItems,
-              sales_invoices: booking_detail.sales_invoices || [],
-              // ✅ security_document_status map ചെയ്യുന്നു
-              securityDocumentStatus: booking_detail.security_document_status || "",
-              bookingEntryStatus:
-                bookingStatusMap.get(booking_detail.booking_entry) || "Unknown",
-            };
-          })
-          .filter(
-            (booking) =>
-              // booking.bookingEntryStatus !== "Reserved" &&
-              booking.bookingEntryStatus !== "Cancelled"
+          const bookingStatusMap = new Map(
+            bookingStatusData.booking_entries.map((entry) => [
+              entry.name,
+              entry.status,
+            ])
           );
 
-        const sortedData = sortBookingData(formattedBookingData, sortOrder);
-        setFinancialData(sortedData);
-        setAllBookingData(sortedData);
+          const formattedBookingData = (BookingData || [])
+            .map((booking_detail) => {
+              const rentalItems = booking_detail.rental_items.map((item) => ({
+                ...item,
+                isReturned: item.returned_item === 1,
+              }));
+
+              return {
+                id: booking_detail.booking_entry,
+                status: ["Returned", "Partially Returned"].includes(
+                  booking_detail.booking_status
+                )
+                  ? booking_detail.booking_status
+                  : booking_detail.date_status,
+                customer_data: booking_detail.customer,
+                date: new Date(booking_detail.actual_to_date),
+                totalPrice: booking_detail.total_agreement_amount,
+                advanceAmount: booking_detail.amount_received,
+                balanceAmount: booking_detail.pending_amount,
+                itemName: booking_detail.rental_items[0]?.item_name,
+                rentalItems,
+                sales_invoices: booking_detail.sales_invoices || [],
+                securityDocumentStatus: booking_detail.security_document_status || "",
+                bookingEntryStatus:
+                  bookingStatusMap.get(booking_detail.booking_entry) || "Unknown",
+              };
+            })
+            .filter(
+              (booking) =>
+                booking.bookingEntryStatus !== "Cancelled"
+            );
+
+          const sortedData = sortBookingData(formattedBookingData, sortOrder);
+          setFinancialData(sortedData);
+          setAllBookingData(sortedData);
+        } else {
+          // Fetch Rental Booking data
+          const bookings = await getReturnableBookings();
+          
+          const formattedBookingData = (bookings || []).map((booking) => {
+            return {
+               id: booking.name,
+               status: booking.booking_status,
+               customer_data: booking.customer,
+               date: new Date(booking.end_date),
+               totalPrice: booking.rental_rate * booking.quantity,
+               advanceAmount: 0,
+               balanceAmount: 0,
+               itemName: booking.asset_name || booking.asset,
+               rentalItems: [{
+                   rental_item_id: booking.asset,
+                   item_name: booking.asset_name || booking.asset,
+                   quantity: booking.quantity,
+                   isReturned: false
+               }],
+               sales_invoices: [],
+               securityDocumentStatus: "",
+               bookingEntryStatus: booking.booking_status,
+               isRentalBooking: true, // Flag to identify new workflow
+               rawBooking: booking
+            };
+          });
+
+          const sortedData = sortBookingData(formattedBookingData, sortOrder);
+          setFinancialData(sortedData);
+          setAllBookingData(sortedData);
+        }
       } catch (error) {
         addToast(
           error.message || "Failed to fetch data from the server",
@@ -101,8 +135,7 @@ const CardList = ({
     };
 
     fetchBookingData();
-  }, []);
-
+  }, [returnViewType]);
   useEffect(() => {
     if (allBookingData.length > 0) {
       const sortedData = sortBookingData(allBookingData, sortOrder);
@@ -150,7 +183,12 @@ const CardList = ({
 
   return (
     <div>
-      <div className="flex items-center px-4">
+      
+      <div className="flex items-center justify-between px-4 mb-4">
+        <div className="flex">
+          {/* Toggle removed: Defaulting strictly to New Returns (Rental Booking) per workflow requirements. Legacy code preserved but hidden. */}
+        </div>
+
         {!isLoading && (
           <div className="relative inline-block text-left">
             <button
@@ -220,6 +258,7 @@ const CardList = ({
               bookingEntryStatus={data.bookingEntryStatus}
               // ✅ securityDocumentStatus pass ചെയ്യുന്നു
               securityDocumentStatus={data.securityDocumentStatus}
+isRentalBooking={data.isRentalBooking}
               addToast={addToast}
               toDate={toDate}
               formatDate={formatDate}

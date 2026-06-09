@@ -771,3 +771,57 @@ export const getBrandingSettings = async () => {
     return null;
   }
 };
+
+export const getReturnableBookings = async (
+  customer = null,
+  fromDate = null,
+  toDate = null
+) => {
+  try {
+    const params = {};
+    if (customer) params.customer = customer;
+    if (fromDate) params.from_date = fromDate;
+    if (toDate) params.to_date = toDate;
+
+    const response = await axiosInstance.get(
+      `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.rental_return_api.get_returnable_bookings`,
+      { params }
+    );
+    return response.data.message || [];
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const processRentalReturn = async (
+  bookingId,
+  returnDate,
+  remarks = "",
+  damageFound = 0,
+  damageCost = 0,
+  csrfToken
+) => {
+  try {
+    const response = await axiosInstance.post(
+      `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.rental_return_api.process_rental_return`,
+      {
+        booking_id: bookingId,
+        return_date: returnDate,
+        remarks,
+        damage_found: damageFound,
+        damage_cost: damageCost
+      },
+      {
+        headers: {
+          "X-Frappe-CSRF-Token": csrfToken,
+        },
+      }
+    );
+    if (response.data.message && response.data.message.error) {
+      throw new Error(response.data.message.error);
+    }
+    return response.data.message;
+  } catch (error) {
+    throw error;
+  }
+};
