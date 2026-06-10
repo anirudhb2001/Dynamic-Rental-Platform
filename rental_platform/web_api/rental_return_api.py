@@ -6,7 +6,7 @@ from frappe.model.mapper import get_mapped_doc
 
 @frappe.whitelist(allow_guest=False)
 def get_returnable_bookings(customer=None, from_date=None, to_date=None):
-    filters = {"docstatus": 1, "booking_status": ["in", ["Reserved", "Picked Up", "On Ride"]]}
+    filters = {"docstatus": ["<", 2], "booking_status": ["in", ["Reserved", "Picked Up", "On Ride"]]}
     
     if customer:
         filters["customer"] = customer

@@ -52,7 +52,7 @@ export const getServiceItem = async () => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch service item from server"
+      "Failed to fetch service item from server"
     );
   }
 };
@@ -107,7 +107,7 @@ export const getItemAvailability = async (startDatetime, endDatetime) => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch item availability status from server"
+      "Failed to fetch item availability status from server"
     );
   }
 };
@@ -140,7 +140,7 @@ export const getReservedBookingEntryData = async (
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch booking entry status from server"
+      "Failed to fetch booking entry status from server"
     );
   }
 };
@@ -154,7 +154,7 @@ export const getBeWithFinancialDetails = async () => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch booking entry from server"
+      "Failed to fetch booking entry from server"
     );
   }
 };
@@ -168,7 +168,7 @@ export const getBookingEntryStatus = async () => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch booking entry status from server"
+      "Failed to fetch booking entry status from server"
     );
   }
 };
@@ -194,7 +194,7 @@ export const getSalesPerson = async () => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch sales person from server"
+      "Failed to fetch sales person from server"
     );
   }
 };
@@ -244,7 +244,7 @@ export const getCustomerLists = async () => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch customer list from server"
+      "Failed to fetch customer list from server"
     );
   }
 };
@@ -284,7 +284,7 @@ export const getUserWarehouse = async () => {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch user warehouse from server"
+      "Failed to fetch user warehouse from server"
     );
   }
 };
@@ -458,7 +458,7 @@ export const extendBookingAvailability = async (
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "Failed to fetch status of extend booking"
+      "Failed to fetch status of extend booking"
     );
   }
 };
@@ -783,9 +783,9 @@ export const getReturnableBookings = async (
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
 
-    const response = await axiosInstance.get(
+    const response = await axios.get(
       `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.rental_return_api.get_returnable_bookings`,
-      { params }
+      { params, withCredentials: true }
     );
     return response.data.message || [];
   } catch (error) {
@@ -802,7 +802,7 @@ export const processRentalReturn = async (
   csrfToken
 ) => {
   try {
-    const response = await axiosInstance.post(
+    const response = await axios.post(
       `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.rental_return_api.process_rental_return`,
       {
         booking_id: bookingId,
@@ -815,6 +815,7 @@ export const processRentalReturn = async (
         headers: {
           "X-Frappe-CSRF-Token": csrfToken,
         },
+        withCredentials: true,
       }
     );
     if (response.data.message && response.data.message.error) {

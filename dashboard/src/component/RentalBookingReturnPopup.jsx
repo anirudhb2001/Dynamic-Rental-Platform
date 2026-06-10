@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { processRentalReturn } from "../services/api";
+import axios from "axios";
 
+axios.get("/api/data");
 const RentalBookingReturnPopup = ({
   show,
   onClose,

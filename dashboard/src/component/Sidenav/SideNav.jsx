@@ -1084,7 +1084,7 @@ const SideNav = ({
                       Rental Returns
                     </p>
                     <h3 className="mt-1 text-xl font-black">
-                      Track overdue bikes, returns and invoices.
+                      Track overdue rentals, returns and invoices.
                     </h3>
                   </div>
                 </div>

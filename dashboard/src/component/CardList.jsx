@@ -24,7 +24,7 @@ const CardList = ({
   formatDate,
   fetchData,
 }) => {
-  
+
   const [returnViewType, setReturnViewType] = useState("rental_booking"); // "rental_booking" or "booking_entry"
   const [toDate, setToDate] = useState(null);
   const itemsPerPage = 12;
@@ -95,28 +95,28 @@ const CardList = ({
         } else {
           // Fetch Rental Booking data
           const bookings = await getReturnableBookings();
-          
+
           const formattedBookingData = (bookings || []).map((booking) => {
             return {
-               id: booking.name,
-               status: booking.booking_status,
-               customer_data: booking.customer,
-               date: new Date(booking.end_date),
-               totalPrice: booking.rental_rate * booking.quantity,
-               advanceAmount: 0,
-               balanceAmount: 0,
-               itemName: booking.asset_name || booking.asset,
-               rentalItems: [{
-                   rental_item_id: booking.asset,
-                   item_name: booking.asset_name || booking.asset,
-                   quantity: booking.quantity,
-                   isReturned: false
-               }],
-               sales_invoices: [],
-               securityDocumentStatus: "",
-               bookingEntryStatus: booking.booking_status,
-               isRentalBooking: true, // Flag to identify new workflow
-               rawBooking: booking
+              id: booking.name,
+              status: booking.booking_status,
+              customer_data: booking.customer,
+              date: new Date(booking.end_date),
+              totalPrice: booking.rental_rate * booking.quantity,
+              advanceAmount: 0,
+              balanceAmount: 0,
+              itemName: booking.asset_name || booking.asset,
+              rentalItems: [{
+                rental_item_id: booking.asset,
+                item_name: booking.asset_name || booking.asset,
+                quantity: booking.quantity,
+                isReturned: false
+              }],
+              sales_invoices: [],
+              securityDocumentStatus: "",
+              bookingEntryStatus: booking.booking_status,
+              isRentalBooking: true, // Flag to identify new workflow
+              rawBooking: booking
             };
           });
 
@@ -183,7 +183,7 @@ const CardList = ({
 
   return (
     <div>
-      
+
       <div className="flex items-center justify-between px-4 mb-4">
         <div className="flex">
           {/* Toggle removed: Defaulting strictly to New Returns (Rental Booking) per workflow requirements. Legacy code preserved but hidden. */}
@@ -198,9 +198,8 @@ const CardList = ({
               <BsArrowDownUp />
               Sort by Modified Date
               <IoIosArrowDown
-                className={`transition-transform ${
-                  isSortDropdownOpen ? "rotate-180" : ""
-                }`}
+                className={`transition-transform ${isSortDropdownOpen ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -208,21 +207,19 @@ const CardList = ({
               <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                 <div className="py-1 text-sm text-gray-700">
                   <button
-                    className={`block px-4 py-2 w-full text-left ${
-                      sortOrder === "newest"
+                    className={`block px-4 py-2 w-full text-left ${sortOrder === "newest"
                         ? "bg-[#E53E3E]"
                         : "hover:bg-[#E53E3E]"
-                    }`}
+                      }`}
                     onClick={() => handleSortChange("newest")}
                   >
                     Newest First
                   </button>
                   <button
-                    className={`block px-4 py-2 w-full text-left ${
-                      sortOrder === "oldest"
+                    className={`block px-4 py-2 w-full text-left ${sortOrder === "oldest"
                         ? "bg-[#E53E3E]"
                         : "hover:bg-[#E53E3E]"
-                    }`}
+                      }`}
                     onClick={() => handleSortChange("oldest")}
                   >
                     Oldest First
@@ -258,7 +255,7 @@ const CardList = ({
               bookingEntryStatus={data.bookingEntryStatus}
               // ✅ securityDocumentStatus pass ചെയ്യുന്നു
               securityDocumentStatus={data.securityDocumentStatus}
-isRentalBooking={data.isRentalBooking}
+              isRentalBooking={data.isRentalBooking}
               addToast={addToast}
               toDate={toDate}
               formatDate={formatDate}
@@ -277,7 +274,7 @@ isRentalBooking={data.isRentalBooking}
           ))
         ) : (
           <div className="col-span-full text-center text-gray-500">
-            No booking entry found.
+            No rental bookings available for return.
           </div>
         )}
       </div>

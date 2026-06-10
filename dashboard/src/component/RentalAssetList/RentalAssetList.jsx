@@ -32,6 +32,9 @@ import {
 import CancelBookingModal from "../ConfirmationModal/CancelBookingModal.jsx";
 import CustomerLoginModal from "../Auth/CustomerLoginModal.jsx";
 import { customerAuth } from "../../services/customerAuth";
+import axios from "axios";
+
+axios.get("/api/data");
 
 const RentalAssetList = ({
   stockQuantities,
