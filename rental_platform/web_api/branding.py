@@ -14,7 +14,8 @@ def get_branding_settings():
         "secondary_color",
         "hero_title",
         "hero_subtitle",
-        "asset_label"
+        "asset_label",
+        "accent_color"
     ],
     as_dict=True
 )

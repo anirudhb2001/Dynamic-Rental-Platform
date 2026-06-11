@@ -498,7 +498,8 @@ const RentalAssetList = ({
       label: "Total Assets",
       value: assetStats.total,
       icon: LuPackage,
-      accent: "bg-slate-900 text-white",
+      accent: "text-white",
+      customColor: branding?.accent_color,
       glow: "shadow-slate-200",
     },
     {
@@ -631,12 +632,18 @@ const RentalAssetList = ({
   // }, [pickupDate, actual_returnDate, rentalAssets, selectedPriceList]);
 
   if (error) return <h4>Error: {error}</h4>;
-
+  const accentColor = branding?.accent_color || "#0f172a";
   return (
     <div className="flex justify-center items-center font-barlow">
       <div className="w-full main-container">
         <div className="space-y-5 p-2 sm:p-3">
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-primary px-5 py-6 text-white shadow-xl shadow-slate-200 sm:px-7 sm:py-8">
+          {/* #added accent color with branding setting */}
+          <section
+  className="relative overflow-hidden rounded-3xl px-5 py-6 text-white shadow-xl shadow-slate-200 sm:px-7 sm:py-8"
+  style={{
+    background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd, ${accentColor}aa)`
+  }}
+>
             <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl"></div>
             <div className="absolute bottom-0 right-8 hidden h-24 w-48 rounded-t-full bg-white/10 blur-2xl sm:block"></div>
             <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -913,7 +920,13 @@ const RentalAssetList = ({
                           </div>
                           <div className="relative flex h-52 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-primary/10">
                             <div className="absolute bottom-0 h-20 w-full bg-gradient-to-t from-white to-transparent"></div>
-                            <div className="absolute h-36 w-36 rounded-full bg-primary/10 blur-3xl"></div>
+                            <div
+                              className="absolute h-36 w-36 rounded-full blur-3xl"
+                              style={{
+                                backgroundColor: accentColor,
+                                opacity: 0.2
+                              }}
+                            ></div>
                             <img
                               src={asset.image}
                               className="relative z-10 max-h-[168px] w-auto object-contain drop-shadow-xl transition-all duration-500 group-hover:scale-105"

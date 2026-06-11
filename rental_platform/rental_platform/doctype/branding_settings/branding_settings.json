@@ -9,12 +9,15 @@
   "company_name",
   "asset_label",
   "logo",
+  "favicon",
   "primary_color",
   "secondary_color",
+  "column_break_cwzj",
   "website",
   "support_email",
   "hero_title",
-  "hero_subtitle"
+  "hero_subtitle",
+  "accent_color"
  ],
  "fields": [
   {
@@ -62,13 +65,27 @@
    "fieldname": "asset_label",
    "fieldtype": "Data",
    "label": "Asset Label"
+  },
+  {
+   "fieldname": "favicon",
+   "fieldtype": "Attach Image",
+   "label": "Favicon"
+  },
+  {
+   "fieldname": "column_break_cwzj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "accent_color",
+   "fieldtype": "Color",
+   "label": "Accent Color "
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-08 17:51:31.200510",
+ "modified": "2026-06-11 16:03:31.509190",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Branding Settings",
