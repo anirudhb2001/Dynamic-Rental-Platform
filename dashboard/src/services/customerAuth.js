@@ -79,6 +79,56 @@ export const customerAuth = {
     }
   },
 
+  registerWithEmail: async (fullName, email, mobileNo, password) => {
+    try {
+      const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.register_with_email", {
+        full_name: fullName,
+        email: email,
+        mobile_no: mobileNo,
+        password: password,
+      });
+      return response.data?.message || response.data;
+    } catch (error) {
+      return { success: false, message: error.message || "Registration failed" };
+    }
+  },
+
+  loginWithEmail: async (email, password) => {
+    try {
+      const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.login_with_email", {
+        email: email,
+        password: password,
+      });
+      const data = response.data?.message || response.data;
+      if (data?.success) await customerAuth.hydrateContext();
+      return data;
+    } catch (error) {
+      return { success: false, message: error.message || "Login failed" };
+    }
+  },
+
+  forgotPassword: async (email) => {
+    try {
+      const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.forgot_password", { email });
+      return response.data?.message || response.data;
+    } catch (error) {
+      return { success: false, message: "Failed to send reset link" };
+    }
+  },
+
+  googleLogin: async (idToken) => {
+    try {
+      const response = await api.post("/api/method/rental_platform.web_api.customer_portal_auth.google_login", {
+        id_token: idToken,
+      });
+      const data = response.data?.message || response.data;
+      if (data?.success) await customerAuth.hydrateContext();
+      return data;
+    } catch (error) {
+      return { success: false, message: "Google Login failed" };
+    }
+  },
+
   logoutCustomer: async () => {
     try {
       await api.post("/api/method/logout");

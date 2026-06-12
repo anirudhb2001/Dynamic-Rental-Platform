@@ -12,19 +12,25 @@
   "favicon",
   "primary_color",
   "secondary_color",
+  "authentication_mode",
+  "require_admin_approval",
   "column_break_cwzj",
   "website",
   "support_email",
   "hero_title",
   "hero_subtitle",
-  "accent_color"
+  "accent_color",
+  "google_client_id",
+  "google_client_secret"
  ],
  "fields": [
   {
    "fieldname": "company_name",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Company Name",
-   "options": "Company"
+   "options": "Company",
+   "reqd": 1
   },
   {
    "fieldname": "logo",
@@ -64,7 +70,9 @@
   {
    "fieldname": "asset_label",
    "fieldtype": "Data",
-   "label": "Asset Label"
+   "in_list_view": 1,
+   "label": "Asset Label",
+   "reqd": 1
   },
   {
    "fieldname": "favicon",
@@ -79,13 +87,37 @@
    "fieldname": "accent_color",
    "fieldtype": "Color",
    "label": "Accent Color "
+  },
+  {
+   "fieldname": "authentication_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Authentication Mode",
+   "options": "OTP Login\nGoogle Login\nEmail + Password\nOTP + Approval\nGoogle + Approval",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "require_admin_approval",
+   "fieldtype": "Check",
+   "label": "Require Admin Approval"
+  },
+  {
+   "fieldname": "google_client_id",
+   "fieldtype": "Data",
+   "label": "Google Client Id"
+  },
+  {
+   "fieldname": "google_client_secret",
+   "fieldtype": "Password",
+   "label": "Google Client Secret"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-11 16:03:31.509190",
+ "modified": "2026-06-12 15:36:07.662701",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Branding Settings",

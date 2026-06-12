@@ -778,6 +778,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   setSelectedItemAvailStatus={setSelectedItemAvailStatus}
                   setIsItemStatusDropOpen={setIsItemStatusDropOpen}
                   isItemStatusDropOpen={isItemStatusDropOpen}
+                  branding={brandingData}
                 />
               )}
             </div>

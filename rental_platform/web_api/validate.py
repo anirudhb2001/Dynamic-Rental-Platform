@@ -75,6 +75,20 @@ def validate_customer_verification(doc, method=None):
     if not doc.custom_customer_verified:
         frappe.throw("Customer must be verified before proceeding")
 
+def validate_portal_approval_status(doc, method=None):
+    if not doc.get("customer"):
+        return
+        
+    # Do not block if user is system manager
+    if "System Manager" in frappe.get_roles(frappe.session.user):
+        return
+        
+    approval_status = frappe.db.get_value("Customer", doc.customer, "portal_approval_status")
+    
+    if approval_status in ["Pending", "Rejected"]:
+        frappe.throw(_("Action blocked: Your account status is {0}. Please wait for admin approval.").format(approval_status))
+
+
 
 @frappe.whitelist()
 def get_user_default_warehouse():

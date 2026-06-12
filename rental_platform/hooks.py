@@ -186,8 +186,15 @@ doc_events = {
     "Customer": {
         "validate": "rental_platform.web_api.validate.validate_customer_verification",
     },
+    "Rental Booking": {
+        "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
+    },
+    "Quotation": {
+        "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
+    },
     "Sales Order": {
         "on_submit": "rental_platform.email.order_confirmation",
+        "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
     }
 #         "Quotation": {
 #         "on_submit": "rental_platform.rental_platform.doctype.booking_entry.booking_entry.create_booking_entry"

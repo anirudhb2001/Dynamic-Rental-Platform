@@ -15,7 +15,11 @@ def get_branding_settings():
         "hero_title",
         "hero_subtitle",
         "asset_label",
-        "accent_color"
+        "accent_color",
+        "authentication_mode",
+        "require_admin_approval",
+        "enable_google_login",
+        "google_client_id"
     ],
     as_dict=True
 )

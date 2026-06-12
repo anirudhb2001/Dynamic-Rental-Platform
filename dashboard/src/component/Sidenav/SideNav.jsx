@@ -72,7 +72,9 @@ const SideNav = ({
   setIsItemStatusDropOpen,
   isItemStatusDropOpen,
   portalMode,
+  branding,
 }) => {
+  const accentColor = branding?.accent_color || "#0f172a";
   const safeAllBookingData = Array.isArray(allBookingData)
     ? allBookingData
     : [];
@@ -619,7 +621,12 @@ const SideNav = ({
     <div className="w-full flex flex-col h-[calc(100vh-6rem)] overflow-y-auto rounded-3xl bg-white/45 p-3 backdrop-blur-xl">
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <div ref={dropdownRef} className="flex flex-col gap-5">
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-primary p-5 text-white shadow-lg transition-all duration-300 hover:shadow-xl">
+          <section 
+            className="relative overflow-hidden rounded-3xl p-5 text-white shadow-lg transition-all duration-300 hover:shadow-xl"
+            style={{
+              background: `linear-gradient(to bottom right, ${accentColor}, ${accentColor}dd, ${accentColor}aa)`
+            }}
+          >
             <div className="absolute -right-12 -top-16 h-36 w-36 rounded-full bg-white/15 blur-3xl"></div>
             <div className="absolute bottom-0 left-8 h-16 w-32 rounded-t-full bg-white/10 blur-2xl"></div>
             <div className="relative z-10">
