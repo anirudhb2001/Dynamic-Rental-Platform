@@ -23,6 +23,7 @@ const CardList = ({
   allBookingData,
   formatDate,
   fetchData,
+  customerDetails,
 }) => {
 
   const [returnViewType, setReturnViewType] = useState("rental_booking"); // "rental_booking" or "booking_entry"
@@ -261,6 +262,7 @@ const CardList = ({
               formatDate={formatDate}
               fetchData={fetchData}
               setToDate={setToDate}
+              customerDetails={customerDetails}
               onRedirectToRentalAssetList={() =>
                 onRedirectToRentalAssetList(
                   data.id,

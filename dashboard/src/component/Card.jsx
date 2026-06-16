@@ -22,6 +22,7 @@ const Card = ({
   fetchData,
   securityDocumentStatus, // ✅ പുതിയ prop
   isRentalBooking,
+  customerDetails,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [initialTab, setInitialTab] = useState("return");
@@ -105,6 +106,13 @@ const Card = ({
         {isBookingReturned ? (
           <button className="w-full text-white font-semibold py-2 mt-auto bg-emerald-500 hover:bg-emerald-600 transition-colors">
             RETURNED
+          </button>
+        ) : customerDetails?.portal_approval_status === "Pending" ? (
+          <button
+            disabled
+            className="w-full text-amber-800 font-semibold py-2 mt-auto bg-amber-100 cursor-not-allowed border-t border-amber-200 transition-colors"
+          >
+            PENDING ADMIN APPROVAL
           </button>
         ) : (
           <div className="flex">

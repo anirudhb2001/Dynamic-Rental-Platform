@@ -53,12 +53,13 @@ def _get_or_create_user(email, full_name, mobile_no=None, send_welcome=False):
     if mobile_no:
         user.mobile_no = mobile_no
     user.send_welcome_email = 1 if send_welcome else 0
+    user.enabled = 1
     user.insert(ignore_permissions=True)
     user.add_roles("Rental Customer")
     return user.name, True
 
 
-def _get_or_create_customer(full_name, mobile_no=None, email=None, policy=None):
+def _get_or_create_customer(full_name, mobile_no=None, email=None, policy=None, registration_method="OTP"):
     """Get existing customer or create a new one. Returns (customer_name, is_new)."""
     customer_name = None
 
@@ -77,22 +78,23 @@ def _get_or_create_customer(full_name, mobile_no=None, email=None, policy=None):
     cust.customer_name = full_name or "Customer"
     cust.customer_type = "Individual"
 
-    generated_mobile = mobile_no or f"GOOGLE-{frappe.generate_hash(length=6)}"
-
-    cust.mobile_no = generated_mobile
-    cust.custom_alternate_number = generated_mobile
+    if mobile_no:
+        cust.mobile_no = mobile_no
+        cust.custom_alternate_number = mobile_no
 
     if email:
         cust.custom_email = email
 
     cust.territory = "All Territories"
+    # Set verification flags to 1 so that Google/Email users don't get trapped in OTP screens later
     cust.custom_customer_verified = 1
     cust.custom_verify_alternate_otp = 1
     cust.portal_approval_status = approval_status
 
     cust.insert(ignore_permissions=True)
     # Notification
-    _notify_admin_registration(full_name or "Customer", "OTP")
+    if registration_method:
+        _notify_admin_registration(full_name or "Customer", registration_method)
 
     return cust.name, True
 
@@ -184,14 +186,26 @@ def verify_login_otp(mobile_no, otp_value, full_name=None):
     user_email = f"{mobile_no}@customer.dynamicrental.local"
     user_name, _ = _get_or_create_user(user_email, full_name, mobile_no=mobile_no)
 
+    # Force enable user (Rule 4)
+    frappe.db.set_value("User", user_name, "enabled", 1)
+
     # Get or Create Customer
     customer_name, is_new_customer = _get_or_create_customer(full_name, mobile_no=mobile_no, policy=policy)
 
-    # Login
-    _login_user(user_name)
-
     # Read approval status
     approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status") or "Approved"
+    auth_mode = policy.get("authentication_mode")
+
+    if auth_mode == "OTP + Approval" and approval_status != "Approved":
+        return {
+            "success": True,
+            "message": "Your account is awaiting administrator approval.",
+            "is_new_user": is_new_customer,
+            "portal_approval_status": approval_status,
+        }
+
+    # Login
+    _login_user(user_name)
 
     return {
         "success": True,
@@ -270,14 +284,14 @@ def update_approval_status(customer_id, status):
 # ──────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=True)
-def register_with_email(full_name, email, mobile_no, password):
-    if not all([full_name, email, mobile_no, password]):
-        return {"success": False, "message": "All fields are required."}
+def register_with_email(full_name, email, password, mobile_no=None):
+    if not all([full_name, email, password]):
+        return {"success": False, "message": "Name, Email, and Password are required."}
 
     if frappe.db.exists("User", {"email": email}):
         return {"success": False, "message": "An account with this email already exists."}
 
-    if frappe.db.exists("Customer", {"mobile_no": mobile_no}):
+    if mobile_no and frappe.db.exists("Customer", {"mobile_no": mobile_no}):
         return {"success": False, "message": "A customer with this mobile number already exists."}
 
     policy = _get_auth_policy()
@@ -288,8 +302,9 @@ def register_with_email(full_name, email, mobile_no, password):
         cust = frappe.new_doc("Customer")
         cust.customer_name = full_name
         cust.customer_type = "Individual"
-        cust.mobile_no = mobile_no
-        cust.custom_alternate_number = mobile_no
+        if mobile_no:
+            cust.mobile_no = mobile_no
+            cust.custom_alternate_number = mobile_no
         cust.territory = "All Territories"
         cust.custom_customer_verified = 1
         cust.custom_verify_alternate_otp = 1
@@ -302,7 +317,8 @@ def register_with_email(full_name, email, mobile_no, password):
         user = frappe.new_doc("User")
         user.email = email
         user.first_name = full_name
-        user.mobile_no = mobile_no
+        if mobile_no:
+            user.mobile_no = mobile_no
         user.new_password = password
         user.send_welcome_email = 0
         user.enabled = 1  # Enable immediately
@@ -439,6 +455,9 @@ def google_login(id_token):
         # Get or Create User
         user_name, is_new_user = _get_or_create_user(email, full_name)
 
+        # Force enable the user (Rule 1 & Rule 4: never use user.enabled = 0 for approval)
+        frappe.db.set_value("User", user_name, "enabled", 1)
+
         # Update user image if available and user is new
         if is_new_user and picture:
             try:
@@ -448,18 +467,28 @@ def google_login(id_token):
 
         # Get or Create Customer
         customer_name, is_new_customer = _get_or_create_customer(
-            full_name, email=email, policy=policy
+            full_name, email=email, policy=policy, registration_method="Google" if is_new_user else None
         )
 
-        # If it's a new customer, update the notification method
-        if is_new_customer:
-            _notify_admin_registration(full_name, "Google")
+        approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status") or "Approved"
+        auth_mode = policy.get("authentication_mode")
+
+        # Apply Rule 1: Auto-approve if mode is purely "Google Login"
+        if auth_mode == "Google Login" and approval_status != "Approved":
+            frappe.db.set_value("Customer", customer_name, "portal_approval_status", "Approved")
+            approval_status = "Approved"
+
+        # Apply Rule 2: If "Google + Approval" and pending, do not login
+        if auth_mode == "Google + Approval" and approval_status != "Approved":
+            return {
+                "success": True,
+                "message": "Your account is awaiting administrator approval.",
+                "is_new_user": is_new_customer,
+                "portal_approval_status": approval_status,
+            }
 
         # Login
         _login_user(user_name)
-
-        # Read final approval status
-        approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status") or "Approved"
 
         return {
             "success": True,

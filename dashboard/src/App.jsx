@@ -833,6 +833,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   setIsSortActive={setIsSortActive}
                   sortOption={sortOption}
                   setSortOption={setSortOption}
+                  customerDetails={customerDetails}
                 />
               ) : (
                 <CardList
@@ -852,6 +853,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   setIsLoading={setIsLoading}
                   formatDate={formatDate}
                   fetchData={fetchData}
+                  customerDetails={customerDetails}
                 />
               )}
             </div>
@@ -875,6 +877,7 @@ setMainCartItems((prev) => [...prev, ...items]);
                   setQuotationNames={setQuotationNames}
                   portalMode={portalMode}
                   fetchData={fetchData}
+                  customerDetails={customerDetails}
                 />
               </div>
             )}

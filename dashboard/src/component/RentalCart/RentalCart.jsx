@@ -15,6 +15,7 @@ import {
   validateOtp,
   extendBooking,
   updateAdditionalDiscount,
+  getBrandingSettings,
 } from "../../services/api.jsx";
 import ConfirmCheckoutModal from "../ConfirmationModal/ConfirmCheckoutModal.jsx";
 import QuotationSubmitModal from "../ConfirmationModal/QuotationSubmitModal.jsx";
@@ -38,6 +39,7 @@ function RentalCart({
   setQuotationNames,
   portalMode,
   fetchData,
+  customerDetails,
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,7 +65,25 @@ function RentalCart({
   const [timer, setTimer] = useState(0);
   const timerRef = useRef(null);
   const [isInclusiveTax, setIsInclusiveTax] = useState(false);
+  const [authMode, setAuthMode] = useState("OTP Login");
 
+  const isPendingApproval = portalMode === "customer" && customerDetails?.portal_approval_status === "Pending";
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const data = await getBrandingSettings();
+        if (data && data.authentication_mode) {
+          setAuthMode(data.authentication_mode);
+        }
+      } catch (err) {
+        console.error("Failed to fetch branding settings in RentalCart:", err);
+      }
+    };
+    fetchBranding();
+  }, []);
+
+  const isOTPRequired = authMode === "OTP Login" || authMode === "OTP + Approval";
 
   // API Functionalities.
 
@@ -1015,63 +1035,83 @@ function RentalCart({
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
-          <button
-            disabled={!quotationNames[0] || isCheckoutStarted}
-            onClick={continueToCheckout}
-            className={`p-3 rounded-lg w-full mt-2
-              ${
-                !quotationNames[0] || isCheckoutStarted
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-primary font-bold text-white hover:bg-primary-hover shadow-md transition-colors"
-              }
-            `}
-          >
-            Continue to Checkout
-          </button>
-          {isCheckoutStarted && !isOtpVerified && (
-            <p className="text-sm text-gray-600">
-              Resend after {Math.floor(timer / 60)}:
-              {String(timer % 60).padStart(2, "0")} minutes
-            </p>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 items-center">
-            <div className="relative flex w-full">
-              <input
-                type="text"
-                className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full pr-24 text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                placeholder="Enter OTP"
-                value={enteredOtp}
-                onChange={handleOtpChange}
-                disabled={isOtpVerified}
-              />
-              <button
-                onClick={verifyOtp}
-                disabled={!isOtpSent || isOtpVerified}
-                className={`h-10 px-4 rounded-r-lg absolute right-0 top-0 font-medium transition-colors ${
-                  isOtpVerified
-                    ? "bg-green-500 text-white cursor-not-allowed"
-                    : isOtpSent
-                    ? "bg-primary text-white hover:bg-primary-hover"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                {isOtpVerified ? "Verified" : "Verify"}
-              </button>
+          {isPendingApproval ? (
+            <div className="p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200 text-center">
+              Your account is pending administrator approval. Checkout is disabled.
             </div>
-          </div>
+          ) : isOTPRequired ? (
+            <>
+              <button
+                disabled={!quotationNames[0] || isCheckoutStarted}
+                onClick={continueToCheckout}
+                className={`p-3 rounded-lg w-full mt-2
+                  ${
+                    !quotationNames[0] || isCheckoutStarted
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-primary font-bold text-white hover:bg-primary-hover shadow-md transition-colors"
+                  }
+                `}
+              >
+                Continue to Checkout
+              </button>
+              {isCheckoutStarted && !isOtpVerified && (
+                <p className="text-sm text-gray-600">
+                  Resend after {Math.floor(timer / 60)}:
+                  {String(timer % 60).padStart(2, "0")} minutes
+                </p>
+              )}
 
-          <button
-            onClick={confirmToCheckout}
-            className={`mt-4 px-4 py-3 w-full rounded-lg text-sm transition-colors ${
-              isOtpVerified
-                ? "bg-primary font-bold text-white hover:bg-primary-hover shadow-md"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed font-medium"
-            }`}
-            disabled={!isOtpVerified}
-          >
-            Confirm to Checkout
-          </button>
+              <div className="flex flex-col sm:flex-row gap-3 items-center">
+                <div className="relative flex w-full">
+                  <input
+                    type="text"
+                    className="bg-white border border-gray-200 shadow-sm px-3 h-10 rounded-lg w-full pr-24 text-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    placeholder="Enter OTP"
+                    value={enteredOtp}
+                    onChange={handleOtpChange}
+                    disabled={isOtpVerified}
+                  />
+                  <button
+                    onClick={verifyOtp}
+                    disabled={!isOtpSent || isOtpVerified}
+                    className={`h-10 px-4 rounded-r-lg absolute right-0 top-0 font-medium transition-colors ${
+                      isOtpVerified
+                        ? "bg-green-500 text-white cursor-not-allowed"
+                        : isOtpSent
+                        ? "bg-primary text-white hover:bg-primary-hover"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    {isOtpVerified ? "Verified" : "Verify"}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={confirmToCheckout}
+                className={`mt-4 px-4 py-3 w-full rounded-lg text-sm transition-colors ${
+                  isOtpVerified
+                    ? "bg-primary font-bold text-white hover:bg-primary-hover shadow-md"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed font-medium"
+                }`}
+                disabled={!isOtpVerified}
+              >
+                Confirm to Checkout
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={confirmToCheckout}
+              className={`mt-4 px-4 py-3 w-full rounded-lg text-sm transition-colors ${
+                !quotationNames[0]
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed font-medium"
+                  : "bg-primary font-bold text-white hover:bg-primary-hover shadow-md"
+              }`}
+              disabled={!quotationNames[0]}
+            >
+              Confirm to Checkout
+            </button>
+          )}
 
           <QuotationSubmitModal
             isOpen={isClearCartModalOpen}

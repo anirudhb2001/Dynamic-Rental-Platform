@@ -78,6 +78,7 @@ const RentalAssetList = ({
   sortOption,
   setSortOption,
   portalMode,
+  customerDetails,
 }) => {
   const safeRentalAssets = Array.isArray(rentalAssets) ? rentalAssets : [];
   const safeMainCartItems = Array.isArray(mainCartItems) ? mainCartItems : [];
@@ -214,6 +215,11 @@ const RentalAssetList = ({
 
     if (status === "rented") {
       addToast("This item is already rented by another customer.", "error");
+      return;
+    }
+
+    if (portalMode === "customer" && customerDetails?.portal_approval_status === "Pending") {
+      addToast("Your account is pending administrator approval.", "info");
       return;
     }
 
@@ -1050,7 +1056,8 @@ const RentalAssetList = ({
                                   type="button"
                                   disabled={
                                     getAssetStatus(asset) !== "available" || 
-                                    (portalMode === "customer" && isAuthenticated && !selectedCustomer)
+                                    (portalMode === "customer" && isAuthenticated && !selectedCustomer) ||
+                                    (portalMode === "customer" && customerDetails?.portal_approval_status === "Pending")
                                   }
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1059,12 +1066,14 @@ const RentalAssetList = ({
                                       setIsAuthModalOpen(true);
                                     } else if (portalMode === "customer" && isAuthenticated && !selectedCustomer) {
                                       addToast("Loading customer profile, please wait...", "info");
+                                    } else if (portalMode === "customer" && customerDetails?.portal_approval_status === "Pending") {
+                                      addToast("Your account is pending administrator approval.", "info");
                                     } else if (!forceAvailable) {
                                       openModal(asset);
                                     }
                                   }}
                                   className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-black text-white shadow-md transition-all ${
-                                    getAssetStatus(asset) !== "available" || (portalMode === "customer" && isAuthenticated && !selectedCustomer)
+                                    getAssetStatus(asset) !== "available" || (portalMode === "customer" && isAuthenticated && !selectedCustomer) || (portalMode === "customer" && customerDetails?.portal_approval_status === "Pending")
                                       ? "bg-slate-300 shadow-none cursor-not-allowed"
                                       : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-hover"
                                   }`}
@@ -1072,7 +1081,7 @@ const RentalAssetList = ({
                                   {portalMode === "customer" 
                                     ? (getAssetStatus(asset) === "available" 
                                         ? (isAuthenticated 
-                                            ? (selectedCustomer ? "Book Now" : "Loading profile...") 
+                                            ? (customerDetails?.portal_approval_status === "Pending" ? "Pending Approval" : (selectedCustomer ? "Book Now" : "Loading profile...")) 
                                             : "Login to Book") 
                                         : "Currently Unavailable") 
                                     : "Book Now"}
@@ -1142,6 +1151,11 @@ const RentalAssetList = ({
                   onContinueToCheckout={onContinueToCheckout}
                   itemsState={itemsState}
                   setItemsState={setItemsState}
+                  portalMode={portalMode}
+                  isAuthenticated={isAuthenticated}
+                  selectedCustomer={selectedCustomer}
+                  customerDetails={customerDetails}
+                  setIsAuthModalOpen={setIsAuthModalOpen}
                 />
               </section>
             )}
