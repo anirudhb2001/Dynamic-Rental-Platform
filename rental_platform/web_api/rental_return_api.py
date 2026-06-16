@@ -40,6 +40,10 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
             
         booking = frappe.get_doc("Rental Booking", booking_id)
         
+        # Approval enforcement
+        from rental_platform.web_api.validate import check_portal_approval_for_customer
+        check_portal_approval_for_customer(booking.customer)
+        
         # Validate Duplicate Return
         existing_return = frappe.db.exists(
             "Rental Return",

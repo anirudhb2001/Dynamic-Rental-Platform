@@ -195,6 +195,9 @@ doc_events = {
     "Sales Order": {
         "on_submit": "rental_platform.email.order_confirmation",
         "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
+    },
+    "Rental Return": {
+        "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
     }
 #         "Quotation": {
 #         "on_submit": "rental_platform.rental_platform.doctype.booking_entry.booking_entry.create_booking_entry"

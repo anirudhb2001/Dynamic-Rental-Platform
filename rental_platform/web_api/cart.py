@@ -50,6 +50,10 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
         if not frappe.db.exists("Customer", customer):
             return {"error": f"Customer {customer} not found."}
 
+        # Approval enforcement
+        from rental_platform.web_api.validate import check_portal_approval_for_customer
+        check_portal_approval_for_customer(customer)
+
         if isinstance(booking_details, str):
             try:
                 booking_details = json.loads(booking_details)
@@ -531,6 +535,10 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
         if not frappe.db.exists("Quotation", quotation_name):
             return {"error": f"Quotation '{quotation_name}' does not exist."}
         quotation = frappe.get_doc("Quotation", quotation_name)
+
+        # Approval enforcement
+        from rental_platform.web_api.validate import check_portal_approval_for_customer
+        check_portal_approval_for_customer(quotation.party_name)
 
         # If the quotation is not submitted yet, submit it.
         if quotation.docstatus == 0:

@@ -76,6 +76,7 @@ def validate_customer_verification(doc, method=None):
         frappe.throw("Customer must be verified before proceeding")
 
 def validate_portal_approval_status(doc, method=None):
+    """doc_events validate hook for Rental Booking, Quotation, Sales Order."""
     if not doc.get("customer"):
         return
         
@@ -89,8 +90,27 @@ def validate_portal_approval_status(doc, method=None):
         frappe.throw(_("Action blocked: Your account status is {0}. Please wait for admin approval.").format(approval_status))
 
 
+def check_portal_approval_for_customer(customer_name):
+    """
+    Reusable utility for API-level approval checks (cart, checkout, return APIs).
+    Call this at the top of any whitelisted function that operates on a customer.
+    Returns None if allowed. Raises frappe.PermissionError if blocked.
+    """
+    if not customer_name:
+        return
+    if "System Manager" in frappe.get_roles(frappe.session.user):
+        return
 
-@frappe.whitelist()
+    approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status")
+    if approval_status in ["Pending", "Rejected"]:
+        frappe.throw(
+            _("Action blocked: Your account status is {0}. Please wait for admin approval.").format(approval_status),
+            frappe.PermissionError
+        )
+
+
+
+@frappe.whitelist(allow_guest=True)
 def get_user_default_warehouse():
     try:
         user = frappe.session.user
