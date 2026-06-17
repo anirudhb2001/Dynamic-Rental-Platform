@@ -1,0 +1,23 @@
+{
+ "creation": "2026-06-17 10:56:42.684611",
+ "currency": "INR",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Customer",
+ "filters_json": "[[\"Customer\",\"portal_approval_status\",\"=\",\"Pending\",false]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Pending Customer Approvals",
+ "modified": "2026-06-17 10:56:42.684611",
+ "modified_by": "Administrator",
+ "module": "Rental Platform",
+ "name": "Pending Customer Approvals",
+ "owner": "Administrator",
+ "report_function": "Sum",
+ "show_full_number": 0,
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type"
+}

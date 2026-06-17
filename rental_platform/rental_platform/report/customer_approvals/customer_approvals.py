@@ -28,8 +28,8 @@ def get_columns():
             "width": 150
         },
         {
-            "fieldname": "mobile_no",
-            "label": _("Mobile Number"),
+            "fieldname": "custom_registration_method",
+            "label": _("Auth Method"),
             "fieldtype": "Data",
             "width": 120
         },
@@ -65,7 +65,7 @@ def get_data(filters):
             name as customer,
             customer_name,
             custom_email as email,
-            mobile_no,
+            custom_registration_method,
             creation,
             portal_approval_status
         FROM `tabCustomer`

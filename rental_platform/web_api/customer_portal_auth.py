@@ -118,6 +118,9 @@ def _get_or_create_customer(full_name, mobile_no=None, email=None, policy=None, 
     if email:
         cust.custom_email = email
 
+    if registration_method:
+        cust.custom_registration_method = registration_method
+
     cust.territory = "All Territories"
     # Set verification flags to 1 so that Google/Email users don't get trapped in OTP screens later
     cust.custom_customer_verified = 1
@@ -127,21 +130,46 @@ def _get_or_create_customer(full_name, mobile_no=None, email=None, policy=None, 
     cust.insert(ignore_permissions=True)
     # Notification
     if registration_method:
-        _notify_admin_registration(full_name or "Customer", registration_method)
+        _notify_admin_registration(full_name or "Customer", registration_method, approval_status, cust.name)
 
     return cust.name, True
 
 
-def _notify_admin_registration(full_name, method="OTP"):
+def _notify_admin_registration(full_name, method="OTP", status="Approved", customer_id=None):
     """Send admin notification for new customer registration."""
+    if status != "Pending":
+        return
+        
     try:
         from rental_platform.web_api.notification import create_admin_notification
         create_admin_notification(
-            title="New Customer Registered",
-            message=f"{full_name} registered via {method} successfully.",
+            title="New Customer Awaiting Approval",
+            message=f"{full_name} registered via {method} and is awaiting your approval.",
             notification_type="Customer Registration",
-            priority="Medium",
+            reference_doctype="Customer",
+            reference_name=customer_id,
+            priority="High"
         )
+        
+        # ERP Notification Log for Desk Users
+        admin_users = frappe.get_all(
+            "Has Role",
+            filters={"role": "System Manager", "parenttype": "User"},
+            pluck="parent",
+        )
+        for user in set(admin_users):
+            if user == "Guest" or not frappe.db.get_value("User", user, "enabled"):
+                continue
+                
+            doc = frappe.new_doc("Notification Log")
+            doc.subject = "🔔 New Customer Registration Awaiting Approval"
+            doc.for_user = user
+            doc.type = "Alert"
+            doc.email_content = f"Name: {full_name}<br>Method: {method}<br>Awaiting Approval"
+            # Link to the Customer Approvals Report
+            doc.link = "query-report/Customer Approvals"
+            doc.insert(ignore_permissions=True)
+            
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Customer Registration Notification Error")
 
