@@ -11,8 +11,7 @@ def _get_auth_policy():
         as_dict=True
     ) or {}
     auth_mode = branding.get("authentication_mode") or "OTP Login"
-    is_admin_approval_required = branding.get("require_admin_approval", 0)
-    needs_approval = bool(is_admin_approval_required) or "Approval" in auth_mode
+    is_admin_approval_required = bool(branding.get("require_admin_approval", 0))
     
     # Auto-enable Google Login if the mode requires it, even if the checkbox was missed
     enable_google_login = branding.get("enable_google_login", 0)
@@ -21,7 +20,7 @@ def _get_auth_policy():
         
     return {
         "authentication_mode": auth_mode,
-        "require_admin_approval": needs_approval,
+        "is_admin_approval_required": is_admin_approval_required,
         "enable_google_login": enable_google_login,
         "google_client_id": branding.get("google_client_id", ""),
     }
@@ -29,7 +28,41 @@ def _get_auth_policy():
 
 def _determine_approval_status(policy):
     """Return the portal_approval_status for a new customer based on the current policy."""
-    return "Pending" if policy.get("require_admin_approval") else "Approved"
+    auth_mode = policy.get("authentication_mode")
+    is_admin_approval_required = policy.get("is_admin_approval_required")
+    
+    if auth_mode == "OTP Login":
+        return "Approved"
+    elif auth_mode == "OTP + Approval":
+        return "Pending"
+    elif auth_mode == "Google Login":
+        return "Approved"
+    elif auth_mode == "Google + Approval":
+        return "Pending"
+    elif auth_mode == "Email + Password":
+        return "Pending" if is_admin_approval_required else "Approved"
+        
+    return "Approved"
+
+def _enforce_approval_policy(customer_name, policy, current_status):
+    """Retroactively upgrade a customer to Approved if the current auth mode allows instant access."""
+    auth_mode = policy.get("authentication_mode")
+    is_admin_approval_required = policy.get("is_admin_approval_required")
+
+    expected_status = current_status
+    if auth_mode == "OTP Login":
+        expected_status = "Approved"
+    elif auth_mode == "Google Login":
+        expected_status = "Approved"
+    elif auth_mode == "Email + Password":
+        if not is_admin_approval_required:
+            expected_status = "Approved"
+
+    if expected_status == "Approved" and current_status != "Approved":
+        frappe.db.set_value("Customer", customer_name, "portal_approval_status", "Approved")
+        return "Approved"
+        
+    return current_status
 
 
 def _get_or_create_user(email, full_name, mobile_no=None, send_welcome=False):
@@ -192,8 +225,10 @@ def verify_login_otp(mobile_no, otp_value, full_name=None):
     # Get or Create Customer
     customer_name, is_new_customer = _get_or_create_customer(full_name, mobile_no=mobile_no, policy=policy)
 
-    # Read approval status
+    # Read and enforce approval status
     approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status") or "Approved"
+    approval_status = _enforce_approval_policy(customer_name, policy, approval_status)
+    
     auth_mode = policy.get("authentication_mode")
 
     if auth_mode == "OTP + Approval" and approval_status != "Approved":
@@ -379,6 +414,20 @@ def login_with_email(email, password):
     if not user.enabled:
         return {"success": False, "message": "Please verify your email address first."}
 
+    # Verify approval status
+    policy = _get_auth_policy()
+    customer_name = frappe.db.get_value("Customer", {"custom_email": email}, "name")
+    if customer_name:
+        approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status") or "Approved"
+        approval_status = _enforce_approval_policy(customer_name, policy, approval_status)
+        auth_mode = policy.get("authentication_mode")
+
+        if auth_mode == "Email + Password" and approval_status != "Approved":
+            return {
+                "success": False,
+                "message": "Your account is awaiting administrator approval."
+            }
+
     try:
         from frappe.auth import LoginManager
         login_manager = LoginManager()
@@ -471,12 +520,8 @@ def google_login(id_token):
         )
 
         approval_status = frappe.db.get_value("Customer", customer_name, "portal_approval_status") or "Approved"
+        approval_status = _enforce_approval_policy(customer_name, policy, approval_status)
         auth_mode = policy.get("authentication_mode")
-
-        # Apply Rule 1: Auto-approve if mode is purely "Google Login"
-        if auth_mode == "Google Login" and approval_status != "Approved":
-            frappe.db.set_value("Customer", customer_name, "portal_approval_status", "Approved")
-            approval_status = "Approved"
 
         # Apply Rule 2: If "Google + Approval" and pending, do not login
         if auth_mode == "Google + Approval" and approval_status != "Approved":
