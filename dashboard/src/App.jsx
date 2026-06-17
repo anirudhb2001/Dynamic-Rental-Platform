@@ -3,6 +3,7 @@ import { FrappeProvider } from "frappe-react-sdk";
 import SideNav from "./component/Sidenav/SideNav";
 import RentalAssetList from "./component/RentalAssetList/RentalAssetList";
 import CardList from "./component/CardList";
+import ReturnDashboard from "./component/ReturnDashboard/ReturnDashboard";
 import Header from "./component/Header/Header";
 import RentalCart from "./component/RentalCart/RentalCart";
 import Toast from "./component/ToastAlerts/Toast.jsx";
@@ -129,7 +130,7 @@ function App() {
         setBrandingData(data);
         if (data.company_name) setCompanyName(data.company_name);
         if (data.logo) setLogo(data.logo);
-        
+
         if (data.primary_color) {
           const rgb = hexToRgb(data.primary_color);
           if (rgb) {
@@ -302,7 +303,7 @@ function App() {
         // Update quotation names
         console.log("Quotation Response", quotationResponse);
 
-setMainCartItems((prev) => [...prev, ...items]);
+        setMainCartItems((prev) => [...prev, ...items]);
         setQuotationNames((prevQuotationNames) => [
           ...prevQuotationNames,
           quotationResponse.quotation_name,
@@ -384,13 +385,19 @@ setMainCartItems((prev) => [...prev, ...items]);
     const savedTab = localStorage.getItem("activeTab");
     if (savedTab) {
       setActiveTab(savedTab);
-      setActiveComponent(savedTab === "return" ? "cardList" : "rentalAssetList");
+      setActiveComponent(savedTab === "return" ? "returnDashboard" : "rentalAssetList");
     }
   }, []);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setActiveComponent(tab === "return" ? "cardList" : "rentalAssetList");
+    if (tab === "rental") {
+      setActiveComponent("rentalAssetList");
+    } else if (tab === "return") {
+      setActiveComponent("returnDashboard");
+    } else {
+      setActiveComponent("cardList");
+    }
     localStorage.setItem("activeTab", tab);
   };
 
@@ -479,10 +486,10 @@ setMainCartItems((prev) => [...prev, ...items]);
 
       const filteredItems = rentalItemsForRentalAssetList.length
         ? rentalAssetListData.items.filter((item) =>
-            rentalItemsForRentalAssetList.some(
-              (rentalItem) => rentalItem.rental_item_id === item.item_id
-            )
+          rentalItemsForRentalAssetList.some(
+            (rentalItem) => rentalItem.rental_item_id === item.item_id
           )
+        )
         : rentalAssetListData.items;
 
       let availabilityMap = {};
@@ -490,12 +497,12 @@ setMainCartItems((prev) => [...prev, ...items]);
       if (!forceAvailable) {
         const formattedPickupDate = pickupDate ? formatDate(pickupDate) : "";
         const formattedReturnDate = actual_returnDate ? formatDate(actual_returnDate) : "";
-        
+
         const availabilityResponse = await getItemAvailability(
           formattedPickupDate,
           formattedReturnDate
         );
-        
+
         setGlobalKpis(availabilityResponse.kpis || null);
         const availabilityData = availabilityResponse["total items"] || [];
 
@@ -512,14 +519,14 @@ setMainCartItems((prev) => [...prev, ...items]);
         const itemId = item.item_id || item.name;
         let itemStock = item.stock_qty ?? 0;
         let finalStatus = itemStock > 0 ? "Available" : "Unavailable";
-        
+
         if (!forceAvailable && availabilityMap[itemId]) {
-            finalStatus = availabilityMap[itemId].status;
-            itemStock = availabilityMap[itemId].available_quantity;
+          finalStatus = availabilityMap[itemId].status;
+          itemStock = availabilityMap[itemId].available_quantity;
         }
 
         if (portalMode === "customer" && finalStatus !== "Available") {
-            finalStatus = "Currently Unavailable";
+          finalStatus = "Currently Unavailable";
         }
 
         return {
@@ -543,8 +550,8 @@ setMainCartItems((prev) => [...prev, ...items]);
         forceAvailable
           ? 0
           : rentalAssetListData.pagination
-          ? rentalAssetListData.pagination.total_pages
-          : 0
+            ? rentalAssetListData.pagination.total_pages
+            : 0
       );
     } catch (err) {
       setError(err.message || "Failed to fetch data");
@@ -784,11 +791,10 @@ setMainCartItems((prev) => [...prev, ...items]);
             </div>
 
             <div
-              className={`${
-                activeComponent === "rentalAssetList"
+              className={`${activeComponent === "rentalAssetList"
                   ? "col-span-12 sm:col-span-6"
                   : "col-span-12 sm:col-span-9"
-              }`}
+                }`}
             >
               {activeComponent === "rentalAssetList" ? (
                 <RentalAssetList
@@ -834,6 +840,12 @@ setMainCartItems((prev) => [...prev, ...items]);
                   sortOption={sortOption}
                   setSortOption={setSortOption}
                   customerDetails={customerDetails}
+                />
+              ) : activeComponent === "returnDashboard" ? (
+                <ReturnDashboard 
+                  addToast={addToast} 
+                  portalMode={portalMode} 
+                  branding={brandingData} 
                 />
               ) : (
                 <CardList

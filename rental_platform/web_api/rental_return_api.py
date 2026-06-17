@@ -40,6 +40,9 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
             
         booking = frappe.get_doc("Rental Booking", booking_id)
         
+        if booking.docstatus != 1:
+            return {"error": "Cannot process return. The Rental Booking is not in a submitted state."}
+        
         # Approval enforcement
         from rental_platform.web_api.validate import check_portal_approval_for_customer
         check_portal_approval_for_customer(booking.customer)

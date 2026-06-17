@@ -6,7 +6,10 @@ from frappe.model.document import Document
 
 
 class RentalBooking(Document):
-	pass
+	def on_submit(self):
+		if self.booking_status == "Draft":
+			frappe.db.set_value("Rental Booking", self.name, "booking_status", "Reserved")
+
 
 def validate(self):
     for item in self.rental_items:

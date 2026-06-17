@@ -427,6 +427,7 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
             rental_booking.stock_quantity = item.stock_quantity
             
             rental_booking.insert(ignore_permissions=True)
+            rental_booking.submit()
             rental_booking_names.append(rental_booking.name)
         
         # Create Sales Order
@@ -602,6 +603,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None):
             rental_booking.stock_quantity = item.stock_quantity
             
             rental_booking.insert(ignore_permissions=True)
+            rental_booking.submit()
             rental_booking_names.append(rental_booking.name)
 
         # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError

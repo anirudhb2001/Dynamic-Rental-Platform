@@ -419,6 +419,7 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
             rental_booking.stock_quantity = item.stock_quantity
             
             rental_booking.insert(ignore_permissions=True)
+            rental_booking.submit()
             rental_booking_names.append(rental_booking.name)
         
         default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
@@ -628,8 +629,8 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
             rental_booking.pricelist_name = item.pricelist_name
             rental_booking.quantity = item.quantity
             rental_booking.stock_quantity = item.stock_quantity
-            
             rental_booking.insert(ignore_permissions=True)
+            rental_booking.submit()
 
             # --- Notification Trigger: Admin Booking ---
             try:
