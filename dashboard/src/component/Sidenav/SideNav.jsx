@@ -73,6 +73,8 @@ const SideNav = ({
   isItemStatusDropOpen,
   portalMode,
   branding,
+  selectedSalesInvoiceStatus,
+  setSelectedSalesInvoiceStatus,
 }) => {
   const accentColor = branding?.accent_color || "#0f172a";
   const safeAllBookingData = Array.isArray(allBookingData)
@@ -369,8 +371,6 @@ const SideNav = ({
   const [isSalesInvoiceStatusDropdownOpen, setSalesInvoiceStatusDropdownOpen] =
     useState(false);
   const [salesInvoiceStatusSearchTerm, setSalesInvoiceStatusSearchTerm] =
-    useState("");
-  const [selectedSalesInvoiceStatus, setSelectedSalesInvoiceStatus] =
     useState("");
 
   const salesInvoiceStatusOptions = [

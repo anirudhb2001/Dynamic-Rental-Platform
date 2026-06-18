@@ -69,6 +69,7 @@ def get_admin_return_bookings(tab="All"):
     
     for b in bookings:
         b["asset_name"] = frappe.db.get_value("Rental Asset", b.asset, "asset_name") or b.asset
+        b["warehouse"] = frappe.db.get_value("Rental Asset", b.asset, "location") or ""
         b["customer_name"] = b.customer
         
         start = getdate(b.start_date) if b.start_date else getdate(b.creation)
@@ -93,14 +94,19 @@ def get_admin_return_bookings(tab="All"):
             b["ui_status"] = "Due Today"
         
         # We also derive Inspection Pending / Invoice Pending for the dashboard
+        b["invoice_status"] = ""
         if b.booking_status == "Returned":
             b["ui_status"] = "Inspection Pending"
             has_inspection = frappe.db.exists("Rental Inspection", {"booking": b.name})
             if has_inspection:
                 b["ui_status"] = "Invoice Pending"
-                has_invoice = frappe.db.exists("Sales Invoice", {"custom_rental_booking": b.name})
-                if has_invoice:
-                    b["ui_status"] = "Settlement Pending"
+                
+        # Always check for invoice to populate invoice_status filter
+        invoice_name = frappe.db.get_value("Rental Return", {"booking": b.name}, "sales_invoice")
+        if invoice_name:
+            if b.booking_status == "Returned" and b["ui_status"] == "Invoice Pending":
+                b["ui_status"] = "Settlement Pending"
+            b["invoice_status"] = frappe.db.get_value("Sales Invoice", invoice_name, "status")
                     
         # Apply tab filtering
         if tab == "Active Rentals" and b.booking_status not in ["Reserved", "Picked Up"]:

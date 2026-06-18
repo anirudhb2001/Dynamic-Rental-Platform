@@ -67,6 +67,7 @@ function App() {
   const [salesAvailable, setSalesAvailable] = useState(false);
   const [filterCustomer, setFilterCustomer] = useState(null);
   const [filterDateStatus, setFilterDateStatus] = useState(null);
+  const [selectedSalesInvoiceStatus, setSelectedSalesInvoiceStatus] = useState(null);
   const [allBookingData, setAllBookingData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPageBooking, setCurrentPageBooking] = useState(1);
@@ -128,8 +129,24 @@ function App() {
       const data = await getBrandingSettings();
       if (data) {
         setBrandingData(data);
-        if (data.company_name) setCompanyName(data.company_name);
+        if (data.company_name) {
+          setCompanyName(data.company_name);
+          document.title = data.company_name;
+        }
         if (data.logo) setLogo(data.logo);
+
+        const faviconUrl = data.favicon || data.logo || "/assets/frappe/images/frappe-favicon.svg";
+        
+        // Remove all existing favicons to prevent Frappe defaults or browser caching conflicts
+        const existingFavicons = document.querySelectorAll("link[rel*='icon']");
+        existingFavicons.forEach(el => el.remove());
+        
+        // Create and inject new dynamic favicon
+        const newFavicon = document.createElement("link");
+        newFavicon.rel = "shortcut icon";
+        newFavicon.id = "dynamic-favicon";
+        newFavicon.href = `${faviconUrl}?v=${Date.now()}`;
+        document.head.appendChild(newFavicon);
 
         if (data.primary_color) {
           const rgb = hexToRgb(data.primary_color);
@@ -704,8 +721,10 @@ function App() {
     setExtendPickupDate(null);
     setExtendReturnDate(null);
     setFilterDateStatus(null);
+    setSelectedSalesInvoiceStatus(null);
     setSelectedItemAvailStatus("");
     setSortOption(null);
+    setSearchQuery("");
     if (!isUserWarehouse) {
       setSelectedWarehouse("");
     }
@@ -781,6 +800,8 @@ function App() {
                   portalMode={portalMode}
                   isDateDropdownOpen={isDateDropdownOpen}
                   setFilterDateStatus={setFilterDateStatus}
+                  selectedSalesInvoiceStatus={selectedSalesInvoiceStatus}
+                  setSelectedSalesInvoiceStatus={setSelectedSalesInvoiceStatus}
                   selectedItemAvailStatus={selectedItemAvailStatus}
                   setSelectedItemAvailStatus={setSelectedItemAvailStatus}
                   setIsItemStatusDropOpen={setIsItemStatusDropOpen}
@@ -845,7 +866,14 @@ function App() {
                 <ReturnDashboard 
                   addToast={addToast} 
                   portalMode={portalMode} 
-                  branding={brandingData} 
+                  branding={brandingData}
+                  filterCustomer={filterCustomer}
+                  filterWarehouse={filterWarehouse}
+                  filterStatus={filterDateStatus}
+                  filterInvoiceStatus={selectedSalesInvoiceStatus}
+                  fromDate={extendpickupDate}
+                  toDate={extendreturnDate}
+                  searchQuery={searchQuery}
                 />
               ) : (
                 <CardList

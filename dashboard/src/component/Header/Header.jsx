@@ -104,10 +104,10 @@ function Header({
 
         {/* Right: Actions and User */}
         <div className="flex items-center justify-end gap-6 w-1/4">
-          <button className="hidden lg:flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors text-sm font-medium">
+          {/* <button className="hidden lg:flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors text-sm font-medium">
             <CiSearch className="h-5 w-5" />
             <span>Search</span>
-          </button>
+          </button> */}
           
           {(portalMode !== "customer" || (portalMode === "customer" && isAuthenticated)) && (
             <NotificationDropdown 

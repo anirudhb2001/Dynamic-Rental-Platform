@@ -48,7 +48,7 @@ const CustomerLoginModal = ({ onClose, onSuccess }) => {
         }
         setEnableGoogleLogin(googleEnabled);
         
-        setRequireAdminApproval(data.require_admin_approval === 1);
+        setRequireAdminApproval(data.is_admin_approval_required === 1);
       }
       setBrandingLoaded(true);
     };

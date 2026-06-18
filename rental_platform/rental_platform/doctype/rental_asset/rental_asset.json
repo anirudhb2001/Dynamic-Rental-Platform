@@ -11,6 +11,8 @@
   "asset_category",
   "serial_number",
   "asset_status",
+  "item",
+  "column_break_covq",
   "rental_rate",
   "security_deposit",
   "location",
@@ -64,15 +66,26 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "column_break_covq",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-29 11:24:48.381063",
+ "modified": "2026-06-17 17:30:15.037198",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Rental Asset",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
