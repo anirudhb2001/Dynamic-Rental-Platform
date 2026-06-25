@@ -21,7 +21,9 @@
   "hero_subtitle",
   "accent_color",
   "google_client_id",
-  "google_client_secret"
+  "google_client_secret",
+  "default_asset_tracking_mode",
+  "default_serial_no_mode"
  ],
  "fields": [
   {
@@ -111,13 +113,27 @@
    "fieldname": "google_client_secret",
    "fieldtype": "Password",
    "label": "Google Client Secret"
+  },
+  {
+   "default": "Individual",
+   "fieldname": "default_asset_tracking_mode",
+   "fieldtype": "Select",
+   "label": "Default Asset Tracking Mode",
+   "options": "Individual\nQuantity\nMixed"
+  },
+  {
+   "default": "Manual",
+   "fieldname": "default_serial_no_mode",
+   "fieldtype": "Select",
+   "label": "Default Serial No Mode",
+   "options": "Manual\nAuto"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-12 15:36:07.662701",
+ "modified": "2026-06-24 14:40:36.077479",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Branding Settings",

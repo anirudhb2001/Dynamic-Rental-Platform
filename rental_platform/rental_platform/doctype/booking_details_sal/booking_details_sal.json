@@ -9,11 +9,15 @@
   "section_break_rx8j",
   "rental_item_id",
   "item_name",
+  "item",
+  "serial_no",
+  "source_type",
+  "display_name",
   "pricelist_name",
   "price",
   "quantity",
-  "stock_quantity",
-  "amount"
+  "amount",
+  "stock_quantity"
  ],
  "fields": [
   {
@@ -24,16 +28,41 @@
    "fieldname": "rental_item_id",
    "fieldtype": "Link",
    "label": "Rental Item Id",
-   "options": "Item",
-   "reqd": 1
+   "options": "Rental Asset",
+   "reqd": 0,
+   "in_list_view": 0
   },
   {
    "fieldname": "item_name",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "in_list_view": 0,
    "in_standard_filter": 1,
    "label": "Item Name ",
+   "options": "Rental Asset"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
    "options": "Item"
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Link",
+   "label": "Serial No",
+   "options": "Serial No"
+  },
+  {
+   "fieldname": "source_type",
+   "fieldtype": "Select",
+   "label": "Source Type",
+   "options": "Rental Asset\nItem\nSerial No"
+  },
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "label": "Display Name",
+   "in_list_view": 1
   },
   {
    "fieldname": "pricelist_name",

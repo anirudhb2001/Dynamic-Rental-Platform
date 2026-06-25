@@ -279,8 +279,11 @@ function App() {
           : 1;
 
       return {
-        rental_item_id: item.id,
-        item_name: item.id,
+        rental_item_id: item.item_code || item.id,
+        item: item.item_code || item.id,
+        serial_no: item.serial_no || "",
+        tracking_mode: item.tracking_mode || "",
+        item_name: item.display_name || item.name || item.id,
         pricelist_name: item.price_list,
         price: item.price,
         quantity: quantity,
@@ -548,6 +551,11 @@ function App() {
 
         return {
           id: itemId,
+          item_code: item.item_code,
+          serial_no: item.serial_no,
+          tracking_mode: item.tracking_mode,
+          display_name: item.display_name,
+          total_assets: item.total_assets,
           brand: item.brand_name || item.brand,
           name: item.item_name || item.name,
           status: finalStatus,
@@ -561,7 +569,16 @@ function App() {
         };
       });
 
-      setCameras(formattedData);
+      let sortedData = formattedData;
+      if (pickupDate && (returnDate || actual_returnDate)) {
+        sortedData.sort((a, b) => {
+          if (a.status === "Available" && b.status !== "Available") return -1;
+          if (a.status !== "Available" && b.status === "Available") return 1;
+          return 0;
+        });
+      }
+
+      setCameras(sortedData);
 
       setTotalPages(
         forceAvailable

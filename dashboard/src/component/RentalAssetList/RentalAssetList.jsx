@@ -258,14 +258,7 @@ const RentalAssetList = ({
       return;
     }
 
-    if (!asset.stock_quantity || asset.stock_quantity <= 0) {
-      addToast(
-        "Insufficient stock. This item is currently out of stock and cannot be added to the cart.",
-        "error"
-      );
-      return;
-    }
-
+    // Stock quantity check removed to allow booking Individual items without serial numbers
     if (new Date(actual_returnDate) < new Date(returnDate)) {
       addToast("Actual return date cannot be before return date.", "error");
     }
@@ -314,7 +307,11 @@ const RentalAssetList = ({
 
         const newItem = {
           id: asset.id,
+          item_code: asset.item_code,
+          serial_no: asset.serial_no,
+          tracking_mode: asset.tracking_mode,
           name: asset.name,
+          display_name: asset.display_name || asset.name,
           brand: asset.brand,
           price: asset.price,
           image: asset.image,
@@ -370,7 +367,11 @@ const RentalAssetList = ({
 
       return {
         id: asset.id,
+        item_code: asset.item_code,
+        serial_no: asset.serial_no,
+        tracking_mode: asset.tracking_mode,
         name: asset.name,
+        display_name: asset.display_name || asset.name,
         brand: asset.brand,
         price: asset.price,
         image: asset.image,
@@ -433,7 +434,11 @@ const RentalAssetList = ({
 
     const newItem = {
       id: asset.id,
+      item_code: asset.item_code,
+      serial_no: asset.serial_no,
+      tracking_mode: asset.tracking_mode,
       name: asset.name,
+      display_name: asset.display_name || asset.name,
       brand: asset.brand,
       price: asset.price,
       image: asset.image,
@@ -477,13 +482,15 @@ const RentalAssetList = ({
   const assetStats = globalKpis || safeRentalAssets.reduce(
     (stats, asset) => {
       const status = getAssetStatus(asset);
+      const isIndividual = asset.tracking_mode === "Individual" || asset.custom_asset_tracking_mode === "Individual";
+      const itemTotal = isIndividual ? (asset.total_assets || 0) : (asset.stock_quantity || 1);
 
-      stats.total += 1;
-      if (status === "available") stats.available += 1;
-      if (status === "reserved") stats.reserved += 1;
-      if (status === "rented") stats.onRide += 1;
+      stats.total += itemTotal;
+      if (status === "available") stats.available += (isIndividual ? (asset.available_qty || 0) : itemTotal);
+      if (status === "reserved") stats.reserved += (isIndividual ? (itemTotal - (asset.available_qty || 0)) : 0);
+      if (status === "rented") stats.onRide += 0;
       if (status === "maintenance" || status === "unavailable") {
-        stats.maintenance += 1;
+        stats.maintenance += (status === "maintenance" || status === "unavailable") ? itemTotal : 0;
       }
 
       return stats;
@@ -916,7 +923,7 @@ const RentalAssetList = ({
                             >
                               {status === "rented"
                                 ? "On Ride"
-                                : status === "unavailable"
+                                : status === "maintenance"
                                 ? "Maintenance"
                                 : asset.status || "Unavailable"}
                             </span>
@@ -945,15 +952,15 @@ const RentalAssetList = ({
                               className="min-w-0"
                             title={
                               asset.brand
-                                ? `${asset.brand} ${asset.name}`
-                                : asset.name
+                                ? `${asset.brand} ${asset.display_name || asset.name}`
+                                : asset.display_name || asset.name
                             }
                           >
                               <p className="truncate text-xs font-black uppercase tracking-wide text-primary">
                                 {asset?.brand || "Bike Rental"}
                               </p>
                               <h3 className="mt-1 line-clamp-2 text-lg font-black leading-snug text-slate-950">
-                                {asset.name}
+                                {asset.display_name || asset.name}
                               </h3>
                           </div>
 
@@ -989,22 +996,27 @@ const RentalAssetList = ({
                               )}
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2">
-                              <p className="text-xs font-bold text-slate-500">
-                                Available Stock{" "}
-                              <strong
-                                className={
-                                  asset.stock_quantity <= 0
-                                    ? "text-red-500"
-                                    : "text-slate-800"
-                                }
-                              >
-                                {Math.max(asset.stock_quantity ?? 0, 0)}
-                              </strong>
-                            </p>
-                            </div>
+                            {asset.tracking_mode !== "Individual" && (
+                              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2">
+                                {asset.tracking_mode === "Quantity" || asset.custom_asset_tracking_mode === "Quantity" ? (
+                                  <p className="text-xs font-bold text-slate-500">
+                                    Available Stock{" "}
+                                    <strong className={asset.stock_quantity <= 0 ? "text-red-500" : "text-slate-800"}>
+                                      {Math.max(asset.stock_quantity ?? 0, 0)}
+                                    </strong>
+                                  </p>
+                                ) : (
+                                  <p className="text-xs font-bold text-slate-500">
+                                    Total Assets{" "}
+                                    <strong className="text-slate-800">
+                                      {asset.total_assets ?? 0}
+                                    </strong>
+                                  </p>
+                                )}
+                              </div>
+                            )}
 
-                          {asset.custom_is_bulk_item == 1 && (
+                          {(asset.custom_is_bulk_item == 1 && asset.tracking_mode !== "Individual") && (
                             <div
                                 className="mt-3 w-full"
                               onClick={(e) => e.stopPropagation()}

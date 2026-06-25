@@ -20,14 +20,18 @@ def get_returnable_bookings(customer=None, from_date=None, to_date=None):
     bookings = frappe.get_all(
         "Rental Booking",
         filters=filters,
-        fields=["name", "customer", "asset", "rental_category", "start_date", "end_date", "booking_status", "rental_rate", "quantity", "stock_quantity", "pricelist_name"],
+        fields=["name", "customer", "asset", "item", "serial_no", "rental_category", "start_date", "end_date", "booking_status", "rental_rate", "quantity", "stock_quantity", "pricelist_name"],
         order_by="end_date asc"
     )
     
     for booking in bookings:
-        asset_details = frappe.db.get_value("Rental Asset", booking["asset"], ["asset_name"], as_dict=True)
-        if asset_details:
-            booking["asset_name"] = asset_details.get("asset_name")
+        if booking.get("item"):
+            item_name = frappe.db.get_value("Item", booking["item"], "item_name")
+            booking["asset_name"] = f"{item_name} ({booking.get('serial_no', '')})" if booking.get("serial_no") else item_name
+        elif booking.get("asset"):
+            asset_details = frappe.db.get_value("Rental Asset", booking["asset"], ["asset_name"], as_dict=True)
+            if asset_details:
+                booking["asset_name"] = asset_details.get("asset_name")
             
     return bookings
 
@@ -143,6 +147,8 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
         rental_return.booking = booking_id
         rental_return.customer = booking.customer
         rental_return.asset = booking.asset
+        rental_return.item = booking.item
+        rental_return.serial_no = booking.serial_no
         rental_return.rental_from_date = booking.start_date
         rental_return.rental_to_date = booking.end_date
         rental_return.return_date = return_date

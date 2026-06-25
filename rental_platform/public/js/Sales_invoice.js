@@ -16,47 +16,33 @@ frappe.ui.form.on('Rental Security Document Type', {
 
 
 frappe.ui.form.on('Sales Invoice', {
-    before_insert: function (frm) {
-      console.log("Before Insert Triggered");
-        if (frm.doc.items && frm.doc.items.length > 0) {
-            const sales_order = frm.doc.items[0].sales_order;
-            if (sales_order) {
-                
-                frappe.db.get_value(
-                    'Sales Order', 
-                    sales_order, 
-                    [
-                        'custom_booking_entry',
-                        'custom_rental_items',
-                        'custom_actual_to_date',
-                        'custom_rental_to_date',
-                        'custom_rental_from_date',
-                        'custom_pickup_from_date'
-                    ], 
-                    function (value) {
-                        if (value) {
-                            
-                            if (value.custom_booking_entry) {
-                                frm.set_value('custom_booking_entry', value.custom_booking_entry);
-                            }
-                            if (value.custom_rental_items) {
-                                frm.set_value('custom_rental_items', value.custom_rental_items);
-                            }
-                            if (value.custom_actual_to_date) {
-                                frm.set_value('custom_actual_to_date', value.custom_actual_to_date);
-                            }
-                            if (value.custom_rental_to_date) {
-                                frm.set_value('custom_rental_to_date', value.custom_rental_to_date);
-                            }
-                            if (value.custom_rental_from_date) {
-                                frm.set_value('custom_rental_from_date', value.custom_rental_from_date);
-                            }
-                            if (value.custom_pickup_from_date) {
-                                frm.set_value('custom_pickup_from_date', value.custom_pickup_from_date);
-                            }
+    refresh: function (frm) {
+        if (frm.is_new() && (!frm.doc.custom_rental_items || frm.doc.custom_rental_items.length === 0)) {
+            let sales_order = null;
+            let booking_entry = frm.doc.custom_booking_entry;
+
+            if (frm.doc.items && frm.doc.items.length > 0) {
+                sales_order = frm.doc.items[0].sales_order;
+            }
+
+            if (sales_order || booking_entry) {
+                frappe.call({
+                    method: 'rental_platform.rental_platform.custom_sales_invoice.get_mapped_rental_items',
+                    args: {
+                        sales_order: sales_order,
+                        booking_entry: booking_entry
+                    },
+                    callback: function(r) {
+                        if (r.message && r.message.length > 0) {
+                            frm.clear_table('custom_rental_items');
+                            r.message.forEach(row => {
+                                let child = frm.add_child('custom_rental_items');
+                                Object.assign(child, row);
+                            });
+                            frm.refresh_field('custom_rental_items');
                         }
                     }
-                );
+                });
             }
         }
     }

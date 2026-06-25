@@ -5,24 +5,22 @@ import frappe
 
 @frappe.whitelist(allow_guest=True)
 def get_item_groups():
-    """Fetch item categories and item counts from Rental Asset Category."""
     item_groups = frappe.db.sql("""
         SELECT 
             ig.name AS category_id,
-            ig.category_name AS category_name,
+            ig.item_group_name AS category_name,
             COUNT(i.name) AS item_count
         FROM 
-            `tabRental Asset Category` ig
-        LEFT JOIN 
-            `tabRental Asset` i ON i.asset_category = ig.name
+            `tabItem Group` ig
+        JOIN 
+            `tabItem` i ON i.item_group = ig.name
         WHERE
-            ig.active = 1
+            i.custom_is_rental_asset = 1
         GROUP BY 
-            ig.name, ig.category_name
+            ig.name, ig.item_group_name
         ORDER BY 
-            ig.category_name
+            ig.item_group_name
     """, as_dict=True)
-    
     return item_groups
     
 @frappe.whitelist()
@@ -362,25 +360,22 @@ def get_price_lists():
 @frappe.whitelist(allow_guest=True)
 def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id=None, warehouse=None, sort_price=None, page=1, page_size=12, start_datetime=None, end_datetime=None, status=None):
     
-    filters = ["i.asset_status != 'Inactive'"]
+    filters = ["i.disabled = 0", "i.custom_is_rental_asset = 1"]
 
     if sort_price == "low_to_high":
-        order_by_clause = "i.rental_rate ASC"
+        order_by_clause = "i.custom_daily_rate ASC"
     elif sort_price == "high_to_low":
-        order_by_clause = "i.rental_rate DESC"
+        order_by_clause = "i.custom_daily_rate DESC"
     else:
-        order_by_clause = "i.asset_name ASC"
+        order_by_clause = "i.item_name ASC"
 
-    # Fetch category tree (simplified for Rental Asset Category)
     category_tree = []
     if category_id:
         category_tree = [{"name": category_id, "is_group": 1, "items": [], "children": []}]
-
-    if category_id:
-        filters.append("i.asset_category = %s")
+        filters.append("i.item_group = %s")
 
     if item_name:
-        filters.append("i.asset_name LIKE %s")
+        filters.append("i.item_name LIKE %s")
 
     where_clause = " AND ".join(filters)
     args = []
@@ -397,18 +392,20 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
     query = f"""
         SELECT 
             i.name AS item_id,
-            i.asset_name AS item_name,
-            i.custom_image AS item_image,
-            i.notes AS item_description,
-            i.rental_rate AS price,
+            i.item_name AS item_name,
+            i.image AS item_image,
+            i.description AS item_description,
+            i.custom_daily_rate AS price,
             'Standard Selling' AS price_list_name,
-            NULL AS brand_name,
-            i.location AS warehouse_name,
-            i.custom_stock_qty AS stock_qty,
-            0 AS custom_is_bulk_item,
-            i.asset_status AS status
+            i.brand AS brand_name,
+            '' AS warehouse_name,
+            (SELECT SUM(actual_qty) FROM `tabBin` WHERE item_code = i.name) AS bin_stock_qty,
+            (SELECT COUNT(*) FROM `tabSerial No` WHERE item_code = i.name) AS serial_total_qty,
+            (SELECT COUNT(*) FROM `tabSerial No` WHERE item_code = i.name AND status = 'Active') AS serial_available_qty,
+            CASE WHEN i.custom_asset_tracking_mode = 'Quantity' THEN 1 ELSE 0 END AS custom_is_bulk_item,
+            i.custom_asset_tracking_mode
         FROM  
-            `tabRental Asset` i
+            `tabItem` i
         WHERE 
             {where_clause}
         ORDER BY 
@@ -417,15 +414,95 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
     """
     args.extend([page_size, offset])
 
-    items = frappe.db.sql(query, args, as_dict=True)
+    raw_items = frappe.db.sql(query, args, as_dict=True)
 
-    # Filter by status if requested
+    branding_tracking = frappe.db.get_single_value("Branding Settings", "default_asset_tracking_mode") or "Mixed"
+    items = []
+    
+    for item in raw_items:
+        tracking_mode = item.get("custom_asset_tracking_mode") or branding_tracking
+        if tracking_mode == "Mixed":
+            # If still Mixed at Item level (unlikely, but fallback), default to Individual
+            tracking_mode = "Individual"
+            
+        if tracking_mode == "Individual":
+            # Query active Serial Numbers for this Item
+            serial_nos = frappe.get_all(
+                "Serial No", 
+                filters={"item_code": item["item_id"], "status": "Active"}, 
+                fields=["name"]
+            )
+            
+            # Legacy: Also check Rental Assets if any (keeping backward compatibility)
+            rental_assets = frappe.get_all("Rental Asset", filters={"item": item["item_id"], "asset_status": ["!=", "Inactive"]}, fields=["name", "asset_status"])
+            
+            has_assets = False
+            
+            if serial_nos:
+                has_assets = True
+                for sn in serial_nos:
+                    new_item = item.copy()
+                    new_item["item_id"] = sn["name"]  # For React keys
+                    new_item["item_code"] = item["item_id"]
+                    new_item["item_name"] = item["item_name"]
+                    new_item["serial_no"] = sn["name"]
+                    new_item["display_name"] = f"{item['item_name']} - {sn['name']}"
+                    new_item["tracking_mode"] = "Individual"
+                    new_item["available_qty"] = 1
+                    new_item["total_assets"] = 1
+                    new_item["stock_qty"] = 1
+                    new_item["status"] = "Available"
+                    items.append(new_item)
+                    
+            if rental_assets:
+                has_assets = True
+                for ra in rental_assets:
+                    new_item = item.copy()
+                    new_item["item_id"] = ra["name"]  # Legacy: keep rental asset name as ID
+                    new_item["item_code"] = item["item_id"]
+                    new_item["item_name"] = item["item_name"]
+                    new_item["serial_no"] = ""
+                    new_item["display_name"] = f"{item['item_name']} - {ra['name']}"
+                    new_item["tracking_mode"] = "Individual"
+                    new_item["available_qty"] = 1 if ra["asset_status"] == "Available" else 0
+                    new_item["total_assets"] = 1
+                    new_item["stock_qty"] = 1
+                    new_item["status"] = ra["asset_status"]
+                    items.append(new_item)
+                    
+            if not has_assets:
+                # Still append the base item but mark it unavailable if no serial numbers exist
+                new_item = item.copy()
+                new_item["item_code"] = item["item_id"]
+                new_item["item_name"] = item["item_name"]
+                new_item["serial_no"] = ""
+                new_item["display_name"] = item["item_name"]
+                new_item["tracking_mode"] = "Individual"
+                new_item["available_qty"] = 0
+                new_item["total_assets"] = item.get("serial_total_qty") or 0
+                new_item["stock_qty"] = new_item["total_assets"]
+                new_item["status"] = "Unavailable"
+                items.append(new_item)
+                
+        else:
+            # Quantity Mode
+            item["item_code"] = item["item_id"]
+            item["item_name"] = item["item_name"]
+            item["serial_no"] = ""
+            item["display_name"] = item["item_name"]
+            item["total_assets"] = item.get("bin_stock_qty") or 0
+            item["stock_qty"] = item.get("bin_stock_qty") or 0
+            item["available_qty"] = item["total_assets"]
+            item["status"] = "Available" if item["stock_qty"] > 0 else "Unavailable"
+            item["tracking_mode"] = "Quantity"
+            items.append(item)
+
     if status:
         items = [item for item in items if item["status"] == status]
 
     count_query = f"""
         SELECT COUNT(*) AS total_count
-        FROM `tabRental Asset` i
+        FROM `tabItem` i
         WHERE {where_clause}
     """
     count_args = args[:-2]

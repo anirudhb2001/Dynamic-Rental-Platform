@@ -4,26 +4,21 @@ def get_dashboard_stats():
 
     return {
         "available":
+        frappe.db.count("Serial No", {"status": "Active"}) +
         frappe.db.count(
             "Rental Asset",
-            {"status":"Available"}
+            {"asset_status":"Available"}
         ),
 
         "reserved":
-        frappe.db.count(
-            "Rental Asset",
-            {"status":"Reserved"}
-        ),
+        frappe.db.count("Rental Booking", {"booking_status": "Reserved"}),
 
         "out_on_rent":
-        frappe.db.count(
-            "Rental Asset",
-            {"status":"Out on Rent"}
-        ),
+        frappe.db.count("Rental Booking", {"booking_status": "Picked Up"}),
 
         "maintenance":
         frappe.db.count(
             "Rental Asset",
-            {"status":"Maintenance"}
+            {"asset_status":"Maintenance"}
         )
     }

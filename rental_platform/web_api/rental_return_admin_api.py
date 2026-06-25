@@ -58,7 +58,7 @@ def get_admin_return_bookings(tab="All"):
         "Rental Booking",
         filters=filters,
         fields=[
-            "name", "customer", "asset", "start_date", "end_date", 
+            "name", "customer", "asset", "item", "serial_no", "start_date", "end_date", 
             "booking_status", "rental_rate", "quantity", "deposit_amount", "creation"
         ],
         order_by="end_date asc"
@@ -68,8 +68,18 @@ def get_admin_return_bookings(tab="All"):
     result = []
     
     for b in bookings:
-        b["asset_name"] = frappe.db.get_value("Rental Asset", b.asset, "asset_name") or b.asset
-        b["warehouse"] = frappe.db.get_value("Rental Asset", b.asset, "location") or ""
+        if b.get("item"):
+            item_name = frappe.db.get_value("Item", b.item, "item_name")
+            b["asset_name"] = f"{item_name} ({b.get('serial_no', '')})" if b.get("serial_no") else item_name
+            
+            if b.get("serial_no"):
+                b["warehouse"] = frappe.db.get_value("Serial No", b.serial_no, "warehouse") or ""
+            else:
+                b["warehouse"] = frappe.db.get_value("Item Default", {"parent": b.item}, "default_warehouse") or ""
+        else:
+            b["asset_name"] = frappe.db.get_value("Rental Asset", b.asset, "asset_name") or b.asset
+            b["warehouse"] = frappe.db.get_value("Rental Asset", b.asset, "location") or ""
+            
         b["customer_name"] = b.customer
         
         start = getdate(b.start_date) if b.start_date else getdate(b.creation)

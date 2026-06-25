@@ -63,8 +63,10 @@ def price_list_qty(item_code, price_list, pickup_date, return_date):
         "price_list_rate"
     )
     if rate is None:
-        # Fallback to Rental Asset rate if not a standard item
-        rate = frappe.get_value("Rental Asset", {"name": item_code}, "rental_rate")
+        # Fallback to Item custom_daily_rate or Rental Asset rate if not a standard item
+        rate = frappe.get_value("Item", item_code, "custom_daily_rate")
+        if not rate:
+            rate = frappe.get_value("Rental Asset", {"name": item_code}, "rental_rate")
 
     if rate is None:
         return {"error": "Price rate not found for this item & price list"}
@@ -178,8 +180,10 @@ def qty_return(item_code, price_list, pickup_date, actual_return_date):
                             {'item_code': item_code, 'price_list': price_list}, 
                             'price_list_rate')
     if rate is None:
-        # Fallback to Rental Asset rate if not a standard item
-        rate = frappe.get_value("Rental Asset", {"name": item_code}, "rental_rate")
+        # Fallback to Item custom_daily_rate or Rental Asset rate if not a standard item
+        rate = frappe.get_value("Item", item_code, "custom_daily_rate")
+        if not rate:
+            rate = frappe.get_value("Rental Asset", {"name": item_code}, "rental_rate")
 
     if rate is None:
         frappe.local.response['rate'] = None

@@ -57,44 +57,68 @@ def get_rental_assets(**kwargs):
     Filters by category if provided.
     """
     try:
-        filters = {}
         category = kwargs.get("category")
-        if category:
-            filters["asset_category"] = category
-            
         item_name = kwargs.get("item_name")
-        if item_name:
-            filters["asset_name"] = ["like", f"%{item_name}%"]
-            
         status = kwargs.get("status")
-        if status:
-            filters["asset_status"] = status
 
-        assets = frappe.get_all(
-            "Rental Asset",
-            filters=filters,
-            fields=["name as id", "asset_name as name", "asset_category as category", "rental_rate as rate", "asset_status as status", "custom_image as image", "custom_stock_qty as stock_qty"]
-        )
+        # 1. Fetch Items
+        item_filters = {"custom_is_rental_asset": 1}
+        if category:
+            item_filters["item_group"] = category
+        if item_name:
+            item_filters["item_name"] = ["like", f"%{item_name}%"]
+
+        items = frappe.get_all("Item", filters=item_filters, fields=["name", "item_name", "item_group", "custom_daily_rate", "image", "custom_asset_tracking_mode"])
+
+        results = []
+        for item in items:
+            rate = item.get("custom_daily_rate") or 0
+            if item.custom_asset_tracking_mode == "Individual":
+                # Fetch Serial Numbers
+                sn_filters = {"item_code": item.name}
+                if status:
+                    if status == "Available":
+                        sn_filters["status"] = "Active"
+                    else:
+                        sn_filters["status"] = status
+
+                serial_nos = frappe.get_all("Serial No", filters=sn_filters, fields=["name", "status"])
+                for sn in serial_nos:
+                    results.append({
+                        "id": sn.name,
+                        "name": f"{item.item_name} ({sn.name})",
+                        "category": item.item_group,
+                        "rate": rate,
+                        "status": "Available" if sn.status == "Active" else sn.status,
+                        "image": item.image or "https://images.unsplash.com/photo-1558981806-ec527fa842a5?w=500&q=80",
+                        "stock_qty": 1,
+                        "is_serial_no": True,
+                        "item_code": item.name
+                    })
+            else:
+                # Quantity mode
+                stock_qty = sum([b.actual_qty for b in frappe.get_all("Bin", filters={"item_code": item.name}, fields=["actual_qty"])])
+                if status == "Available" and stock_qty <= 0:
+                    continue
+                
+                results.append({
+                    "id": item.name,
+                    "name": item.item_name,
+                    "category": item.item_group,
+                    "rate": rate,
+                    "status": "Available" if stock_qty > 0 else "Out of Stock",
+                    "image": item.image or "https://images.unsplash.com/photo-1558981806-ec527fa842a5?w=500&q=80",
+                    "stock_qty": stock_qty,
+                    "is_serial_no": False,
+                    "item_code": item.name
+                })
         
         sort_price = kwargs.get("sort_price")
         if sort_price:
             reverse = True if sort_price == "High to Low" else False
-            assets = sorted(assets, key=lambda x: x.get("rate") or 0, reverse=reverse)
-        # Process image paths if needed
-        for asset in assets:
-            if not asset.get("image"):
-                # Default placeholder image if none exists
-                asset["image"] = "https://images.unsplash.com/photo-1558981806-ec527fa842a5?w=500&q=80"
+            results = sorted(results, key=lambda x: x.get("rate") or 0, reverse=reverse)
                 
-            # Default rate if none
-            if not asset.get("rate"):
-                asset["rate"] = 0
-            
-            # Default stock_qty if none
-            if asset.get("stock_qty") is None:
-                asset["stock_qty"] = 0
-                
-        return {"status": "success", "data": assets}
+        return {"status": "success", "data": results}
     except Exception as e:
         frappe.log_error(f"Error fetching Rental Assets: {str(e)}")
         return {"status": "error", "message": "Failed to fetch rental assets"}
@@ -102,10 +126,14 @@ def get_rental_assets(**kwargs):
 @frappe.whitelist(allow_guest=True)
 def get_rental_asset_categories():
     """
-    Returns a list of all Rental Asset Categories for the UI filters.
+    Returns a list of all Rental Asset Categories (Item Groups) for the UI filters.
     """
     try:
-        categories = frappe.get_all("Rental Asset Category", fields=["name", "name as category_name"])
+        categories = frappe.db.sql("""
+            SELECT DISTINCT item_group as name, item_group as category_name
+            FROM `tabItem`
+            WHERE custom_is_rental_asset = 1
+        """, as_dict=True)
         return categories
     except Exception as e:
         frappe.log_error(f"Error fetching Rental Asset Categories: {str(e)}")

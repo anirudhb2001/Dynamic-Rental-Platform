@@ -8,6 +8,9 @@
  "engine": "InnoDB",
  "field_order": [
   "customer",
+  "item",
+  "serial_no",
+  "item_group",
   "rental_category",
   "asset",
   "start_date",
@@ -37,7 +40,7 @@
    "in_list_view": 1,
    "label": "Asset",
    "options": "Rental Asset",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "start_date",
@@ -80,7 +83,7 @@
    "fieldtype": "Link",
    "label": "Rental Category",
    "options": "Rental Asset Category",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "pricelist_name",
@@ -96,6 +99,25 @@
    "fieldname": "stock_quantity",
    "fieldtype": "Float",
    "label": "Stock Quantity"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Link",
+   "label": "Serial No",
+   "options": "Serial No"
+  },
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Link",
+   "label": "Item Group",
+   "options": "Item Group"
   },
   {
    "fieldname": "quotation",

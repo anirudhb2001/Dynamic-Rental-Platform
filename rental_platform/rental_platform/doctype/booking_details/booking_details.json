@@ -23,12 +23,11 @@
   {
    "columns": 2,
    "fieldname": "rental_item_id",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Rental Item ID",
-   "options": "Rental Asset",
    "reqd": 1
   },
   {
