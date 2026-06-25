@@ -8,14 +8,13 @@
  "field_order": [
   "registration_number",
   "status",
-  "notes",
-  "asset_tracking_mode"
+  "notes"
  ],
  "fields": [
   {
    "fieldname": "registration_number",
    "fieldtype": "Data",
-   "label": "Registration Number"
+   "label": "Asset Identifier"
   },
   {
    "fieldname": "status",
@@ -26,20 +25,15 @@
   {
    "fieldname": "notes",
    "fieldtype": "Small Text",
+   "in_list_view": 1,
    "label": "Notes"
-  },
-  {
-   "fieldname": "asset_tracking_mode",
-   "fieldtype": "Select",
-   "label": "Asset tracking mode",
-   "options": "Individual\nQuanitity\nMixed"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-25 12:05:05.837982",
+ "modified": "2026-06-25 16:43:58.153568",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Asset Instance",

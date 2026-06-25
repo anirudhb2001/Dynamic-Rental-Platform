@@ -97,11 +97,12 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
             item_found = False
             stock_quantity = item.get('stock_quantity', 1)
             for q_item in quotation.custom_rental_items:
-                # Match by rental_item_id (item_code) AND serial_no to avoid merging distinct individual items
+                # Match by rental_item_id (item_code) AND serial_no AND asset_instance to avoid merging distinct individual items
                 item_match = q_item.rental_item_id == item.get('rental_item_id')
                 serial_match = (q_item.get('serial_no') or "") == (item.get('serial_no') or "")
+                instance_match = (q_item.get('asset_instance') or "") == (item.get('asset_instance') or "")
                 
-                if item_match and serial_match:
+                if item_match and serial_match and instance_match:
                     new_quantity = q_item.quantity + item.get('quantity')
                     if new_quantity < 0:
                         return {"error": f"Quantity for item {item.get('item_name')} cannot be negative."}
@@ -123,6 +124,7 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
                     "rental_item_id": item.get('rental_item_id'),
                     "item": item.get('item') or item.get('rental_item_id'),
                     "serial_no": item.get('serial_no'),
+                    "asset_instance": item.get('asset_instance'),
                     "item_name": item.get('item_name'),
                     "pricelist_name": item.get('pricelist_name'),
                     "price": item.get('price'),
@@ -238,6 +240,7 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
                         "rental_item_id": i.rental_item_id,
                         "item": i.get('item') or i.rental_item_id,
                         "serial_no": i.get('serial_no'),
+                        "asset_instance": i.get('asset_instance'),
                         "item_name": i.item_name,
                         "pricelist_name": i.pricelist_name,
                         "price": i.price,

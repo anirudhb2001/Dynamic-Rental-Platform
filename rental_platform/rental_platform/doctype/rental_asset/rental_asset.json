@@ -69,7 +69,7 @@
   },
   {
    "fieldname": "item",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Item",
    "options": "Item"
   },
@@ -81,7 +81,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-17 17:30:15.037198",
+ "modified": "2026-06-25 17:00:18.380399",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Rental Asset",

@@ -426,11 +426,11 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
             tracking_mode = "Individual"
             
         if tracking_mode == "Individual":
-            # Query active Serial Numbers for this Item
-            serial_nos = frappe.get_all(
-                "Serial No", 
-                filters={"item_code": item["item_id"], "status": "Active"}, 
-                fields=["name"]
+            # Query active Asset Instances for this Item
+            asset_instances = frappe.get_all(
+                "Asset Instance", 
+                filters={"parent": item["item_id"], "status": ["!=", "Sold"]}, 
+                fields=["registration_number", "status"]
             )
             
             # Legacy: Also check Rental Assets if any (keeping backward compatibility)
@@ -438,20 +438,21 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
             
             has_assets = False
             
-            if serial_nos:
+            if asset_instances:
                 has_assets = True
-                for sn in serial_nos:
+                for inst in asset_instances:
                     new_item = item.copy()
-                    new_item["item_id"] = sn["name"]  # For React keys
+                    new_item["item_id"] = inst["registration_number"]  # For React keys
                     new_item["item_code"] = item["item_id"]
                     new_item["item_name"] = item["item_name"]
-                    new_item["serial_no"] = sn["name"]
-                    new_item["display_name"] = f"{item['item_name']} - {sn['name']}"
+                    new_item["asset_instance"] = inst["registration_number"]
+                    new_item["serial_no"] = ""  # Keep for legacy/UI compatibility if needed
+                    new_item["display_name"] = f"{item['item_name']} - {inst['registration_number']}"
                     new_item["tracking_mode"] = "Individual"
-                    new_item["available_qty"] = 1
+                    new_item["available_qty"] = 1 if inst["status"] == "Available" else 0
                     new_item["total_assets"] = 1
                     new_item["stock_qty"] = 1
-                    new_item["status"] = "Available"
+                    new_item["status"] = inst["status"]
                     items.append(new_item)
                     
             if rental_assets:
@@ -461,7 +462,7 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
                     new_item["item_id"] = ra["name"]  # Legacy: keep rental asset name as ID
                     new_item["item_code"] = item["item_id"]
                     new_item["item_name"] = item["item_name"]
-                    new_item["serial_no"] = ""
+                    new_item["asset_instance"] = ""
                     new_item["display_name"] = f"{item['item_name']} - {ra['name']}"
                     new_item["tracking_mode"] = "Individual"
                     new_item["available_qty"] = 1 if ra["asset_status"] == "Available" else 0
@@ -475,6 +476,7 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
                 new_item = item.copy()
                 new_item["item_code"] = item["item_id"]
                 new_item["item_name"] = item["item_name"]
+                new_item["asset_instance"] = ""
                 new_item["serial_no"] = ""
                 new_item["display_name"] = item["item_name"]
                 new_item["tracking_mode"] = "Individual"

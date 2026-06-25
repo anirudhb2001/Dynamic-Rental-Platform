@@ -43,11 +43,11 @@ def get_item_availability(start_datetime=None, end_datetime=None):
         WHERE asset_status != 'Inactive'
     """, as_dict=True)
 
-    # Calculate active bookings (Grouped by item_code AND serial_no if exists)
+    # Calculate active bookings (Grouped by item_code AND asset_instance if exists)
     active_bookings = frappe.db.sql("""
         SELECT
             IFNULL(item, asset) AS item_code,
-            serial_no,
+            IFNULL(asset_instance, serial_no) AS asset_instance,
             booking_status,
             SUM(quantity) AS total_booked
         FROM
@@ -59,7 +59,7 @@ def get_item_availability(start_datetime=None, end_datetime=None):
                 AND end_date > %(start_datetime)s
             )
         GROUP BY
-            IFNULL(item, asset), serial_no, booking_status
+            IFNULL(item, asset), IFNULL(asset_instance, serial_no), booking_status
     """, {
         "start_datetime": start_datetime,
         "end_datetime": end_datetime,
@@ -79,12 +79,12 @@ def get_item_availability(start_datetime=None, end_datetime=None):
             booked_statuses_map_qty[b.item_code] = set()
         booked_statuses_map_qty[b.item_code].add(b.booking_status)
         
-        # Aggregate by serial_no if exists
-        if b.serial_no:
-            booked_qty_map_sn[b.serial_no] = booked_qty_map_sn.get(b.serial_no, 0) + float(b.total_booked)
-            if b.serial_no not in booked_statuses_map_sn:
-                booked_statuses_map_sn[b.serial_no] = set()
-            booked_statuses_map_sn[b.serial_no].add(b.booking_status)
+        # Aggregate by asset_instance if exists
+        if b.asset_instance:
+            booked_qty_map_sn[b.asset_instance] = booked_qty_map_sn.get(b.asset_instance, 0) + float(b.total_booked)
+            if b.asset_instance not in booked_statuses_map_sn:
+                booked_statuses_map_sn[b.asset_instance] = set()
+            booked_statuses_map_sn[b.asset_instance].add(b.booking_status)
 
     total_items_status = []
     
@@ -134,34 +134,34 @@ def get_item_availability(start_datetime=None, end_datetime=None):
                     "status": status
                 })
             else:
-                # Standard Item -> Fetch Serial Numbers
-                serial_nos = frappe.get_all("Serial No", filters={"item_code": item_code, "status": "Active"}, fields=["name", "status", "maintenance_status"])
-                for sn in serial_nos:
+                # Standard Item -> Fetch Asset Instances
+                asset_instances = frappe.get_all("Asset Instance", filters={"parent": item_code, "status": ["!=", "Sold"]}, fields=["registration_number", "status"])
+                for inst in asset_instances:
                     kpis["total"] += 1
-                    sn_name = sn["name"]
+                    inst_name = inst["registration_number"]
                     
-                    booked = float(booked_qty_map_sn.get(sn_name, 0))
+                    booked = float(booked_qty_map_sn.get(inst_name, 0))
                     stock = 1
                     available = max(0, stock - booked)
                     
-                    if sn.get("maintenance_status") == "Under Maintenance":
+                    if inst.get("status") == "Maintenance":
                         status = "Maintenance"
                         available = 0
                         statuses = set()
                     elif available > 0:
                         status = "Available"
-                        statuses = booked_statuses_map_sn.get(sn_name, set())
+                        statuses = booked_statuses_map_sn.get(inst_name, set())
                     else:
-                        statuses = booked_statuses_map_sn.get(sn_name, set())
+                        statuses = booked_statuses_map_sn.get(inst_name, set())
                         status = "On Ride" if "Picked Up" in statuses else ("Reserved" if "Reserved" in statuses else "Unavailable")
                     
                     if available > 0: kpis["available"] += 1
                     if "Reserved" in statuses: kpis["reserved"] += 1
                     if "Picked Up" in statuses or "On Ride" in statuses: kpis["onRide"] += 1
-                    if sn.get("maintenance_status") == "Under Maintenance": kpis["maintenance"] += 1
+                    if inst.get("status") == "Maintenance": kpis["maintenance"] += 1
                     
                     total_items_status.append({
-                        "item_id": sn_name,
+                        "item_id": inst_name,
                         "stock_quantity": stock,
                         "booked_quantity": booked,
                         "available_quantity": available,

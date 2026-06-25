@@ -571,35 +571,35 @@ def process_quotation(quotation_name, booking_entry_id):
         frappe.throw(f"Failed to process quotation: {str(e)}")
 # @frappe.whitelist(allow_guest=True)
 # def extend_bookings_availability(booking_id, new_to_date):
-    new_to_date = get_datetime(new_to_date)  # ✅ ensures datetime
-    doc = frappe.get_doc("Rental Booking", booking_id)
-    new_from_date = doc.end_date
-    status = doc.booking_status
-    items = [{'rental_item_id': doc.asset}]
-
-    unavailable_items = []
-    available_items = []
-
-    for item in items:
-        bookings = frappe.db.sql("""
-            SELECT
-                name, booking_status AS status, asset AS rental_item_id
-            FROM
-                `tabRental Booking`
-            WHERE
-                asset = %(rental_item_id)s
-                AND name != %(current_booking_id)s
-                AND booking_status IN ('Reserved', 'Picked Up', 'On Ride')
-                AND (
-                    start_date <= %(new_to_date)s
-                    AND end_date >= %(new_from_date)s
-                )
-        """, {
-            "current_booking_id": booking_id,
-            "rental_item_id": item['rental_item_id'],
-            "new_from_date": new_from_date,
-            "new_to_date": new_to_date
-        }, as_dict=True)         if bookings:
+#     new_to_date = get_datetime(new_to_date)  # ✅ ensures datetime
+#     doc = frappe.get_doc("Rental Booking", booking_id)
+#     new_from_date = doc.end_date
+#     status = doc.booking_status
+#     items = [{'rental_item_id': doc.asset}]
+# 
+#     unavailable_items = []
+#     available_items = []
+# 
+#     for item in items:
+#         bookings = frappe.db.sql("""
+#             SELECT
+#                 name, booking_status AS status, asset AS rental_item_id
+#             FROM
+#                 `tabRental Booking`
+#             WHERE
+#                 asset = %(rental_item_id)s
+#                 AND name != %(current_booking_id)s
+#                 AND booking_status IN ('Reserved', 'Picked Up', 'On Ride')
+#                 AND (
+#                     start_date <= %(new_to_date)s
+#                     AND end_date >= %(new_from_date)s
+#                 )
+#         """, {
+#             "current_booking_id": booking_id,
+#             "rental_item_id": item['rental_item_id'],
+#             "new_from_date": new_from_date,
+#             "new_to_date": new_to_date
+#         }, as_dict=True)         # if bookings:
 #             item_statuses = [b['status'] for b in bookings]  # Get all statuses of the conflicting bookings
 #             unavailable_items.append({"item_id": item['rental_item_id'], "statuses": item_statuses})
 #         else:

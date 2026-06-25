@@ -149,6 +149,8 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
         rental_return.asset = booking.asset
         rental_return.item = booking.item
         rental_return.serial_no = booking.serial_no
+        if hasattr(booking, "asset_instance"):
+            rental_return.asset_instance = booking.asset_instance
         rental_return.rental_from_date = booking.start_date
         rental_return.rental_to_date = booking.end_date
         rental_return.return_date = return_date
