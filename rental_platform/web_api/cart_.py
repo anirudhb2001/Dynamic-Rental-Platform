@@ -337,24 +337,13 @@ def get_customer_draft_quotations(customer_name):
                 # Handle individual items not part of a bundle
                 if item["rental_item_id"] not in processed_items:
                     item_details = frappe.get_value(
-                        "Rental Asset",
+                        "Item",
                         {"name": item["rental_item_id"]},
-                        ["asset_category", "custom_image"],
+                        ["brand", "image"],
                         as_dict=True
                     )
-                    # Also try Item if not found in Rental Asset (for backward compatibility)
-                    if not item_details:
-                        item_details = frappe.get_value(
-                            "Item",
-                            {"name": item["rental_item_id"]},
-                            ["brand", "image"],
-                            as_dict=True
-                        )
-                        item["brand"] = item_details.get("brand") if item_details else None
-                        item["image"] = item_details.get("image") if item_details else None
-                    else:
-                        item["brand"] = item_details.get("asset_category") if item_details else None
-                        item["image"] = item_details.get("custom_image") if item_details else None
+                    item["brand"] = item_details.get("brand") if item_details else None
+                    item["image"] = item_details.get("image") if item_details else None
                         
                     main_items.append(item)
                     processed_items.add(item["rental_item_id"])
@@ -412,10 +401,13 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
             rental_booking = frappe.new_doc("Rental Booking")
             rental_booking.customer = quotation.party_name
             #rental_booking.custom_mobile_number = custom_mobile_number  # Set mobile number if exists in Rental Booking
-            rental_booking.asset = item.rental_item_id
-            asset_doc = frappe.get_value("Rental Asset", item.rental_item_id, "asset_category")
-            if asset_doc:
-                rental_booking.rental_category = asset_doc
+            if frappe.db.exists("Serial No", item.rental_item_id):
+                rental_booking.serial_no = item.rental_item_id
+                rental_booking.item = frappe.db.get_value("Serial No", item.rental_item_id, "item_code")
+                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
+            else:
+                rental_booking.item = item.rental_item_id
+                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
             rental_booking.start_date = quotation.custom_rental_from_date
             rental_booking.end_date = quotation.custom_rental_to_date
             rental_booking.booking_status = "Reserved"
@@ -587,10 +579,13 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None):
         for item in quotation.custom_rental_items:
             rental_booking = frappe.new_doc("Rental Booking")
             rental_booking.customer = quotation.party_name
-            rental_booking.asset = item.rental_item_id
-            asset_doc = frappe.get_value("Rental Asset", item.rental_item_id, "asset_category")
-            if asset_doc:
-                rental_booking.rental_category = asset_doc
+            if frappe.db.exists("Serial No", item.rental_item_id):
+                rental_booking.serial_no = item.rental_item_id
+                rental_booking.item = frappe.db.get_value("Serial No", item.rental_item_id, "item_code")
+                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
+            else:
+                rental_booking.item = item.rental_item_id
+                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
             rental_booking.start_date = quotation.custom_rental_from_date
             rental_booking.end_date = quotation.custom_rental_to_date
             rental_booking.booking_status = "Reserved"

@@ -62,6 +62,7 @@ function RentalCart({
   const [isAddPercentage, setAddPercentage] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [isCheckoutStarted, setIsCheckoutStarted] = useState(false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [timer, setTimer] = useState(0);
   const timerRef = useRef(null);
   const [isInclusiveTax, setIsInclusiveTax] = useState(false);
@@ -229,16 +230,17 @@ function RentalCart({
         return;
       }
 
+      setIsProcessingCheckout(true);
+
       if (salesAvailable) {
         const bookingEntryName = exbookingEntryName;
         if (!bookingEntryName) {
           addToast("Missing required data for extending the booking.", "error");
+          setIsProcessingCheckout(false);
           return;
         }
 
         try {
-          setConfirmCheckoutOpen(false);
-
           const extendResponse = await extendBooking(
             quotationName,
             bookingEntryName,
@@ -268,11 +270,12 @@ function RentalCart({
             error.message || "An error occurred while extending the booking.",
             "error"
           );
+        } finally {
+          setConfirmCheckoutOpen(false);
+          setIsProcessingCheckout(false);
         }
       } else {
         try {
-          setConfirmCheckoutOpen(false);
-
           const submitResponse = await CreateSaleOrder(
             quotationName,
             selectedSalesPerson,
@@ -311,10 +314,15 @@ function RentalCart({
             error.message || "An error occurred while processing the checkout.",
             "error"
           );
+        } finally {
+          setConfirmCheckoutOpen(false);
+          setIsProcessingCheckout(false);
         }
       }
     } catch (error) {
       addToast("An unexpected error occurred.", "error");
+      setConfirmCheckoutOpen(false);
+      setIsProcessingCheckout(false);
     }
   };
 
@@ -1140,6 +1148,7 @@ function RentalCart({
             message="Do you want to proceed with the checkout?"
             cancelMessage="Cancel"
             confirmMessage="Confirm"
+            isProcessing={isProcessingCheckout}
           />
         </div>
       </div>

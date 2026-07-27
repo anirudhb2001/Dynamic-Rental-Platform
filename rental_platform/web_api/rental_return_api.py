@@ -28,10 +28,8 @@ def get_returnable_bookings(customer=None, from_date=None, to_date=None):
         if booking.get("item"):
             item_name = frappe.db.get_value("Item", booking["item"], "item_name")
             booking["asset_name"] = f"{item_name} ({booking.get('serial_no', '')})" if booking.get("serial_no") else item_name
-        elif booking.get("asset"):
-            asset_details = frappe.db.get_value("Rental Asset", booking["asset"], ["asset_name"], as_dict=True)
-            if asset_details:
-                booking["asset_name"] = asset_details.get("asset_name")
+        else:
+            booking["asset_name"] = booking.get("asset") or booking.get("item")
             
     return bookings
 

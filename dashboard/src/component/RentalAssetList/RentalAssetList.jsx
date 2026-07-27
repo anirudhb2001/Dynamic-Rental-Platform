@@ -555,7 +555,7 @@ const RentalAssetList = ({
 
       const quantityPromises = safeRentalAssets.map((asset) =>
         getPriceListQty(
-          asset.id,
+          asset.item_code || asset.id,
           selectedPriceList,
           formattedPickupDate,
           formattedReturnDate
@@ -593,7 +593,7 @@ const RentalAssetList = ({
 
   //     const quantityPromises = rentalAssets.map((asset) =>
   //       gettQtyReturn(
-  //         asset.id,
+  //         asset.item_code || asset.id,
   //         selectedPriceList,
   //         formattedPickupDate,
   //         formattedActaulReturnDate

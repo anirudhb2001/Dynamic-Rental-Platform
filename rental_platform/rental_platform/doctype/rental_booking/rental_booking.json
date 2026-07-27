@@ -23,7 +23,8 @@
   "quantity",
   "stock_quantity",
   "quotation",
-  "sales_order"
+  "sales_order",
+  "booking_entry"
  ],
  "fields": [
   {
@@ -130,6 +131,12 @@
    "fieldtype": "Link",
    "label": "Sales Order",
    "options": "Sales Order"
+  },
+  {
+   "fieldname": "booking_entry",
+   "fieldtype": "Link",
+   "label": "Booking Entry",
+   "options": "Booking Entry"
   }
  ],
  "grid_page_length": 50,

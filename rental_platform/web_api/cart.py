@@ -422,10 +422,8 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
                 rental_booking.item = item.rental_item_id
                 rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
             else:
-                rental_booking.asset = item.rental_item_id
-                asset_doc = frappe.db.get_value("Rental Asset", item.rental_item_id, "asset_category")
-                if asset_doc:
-                    rental_booking.rental_category = asset_doc
+                rental_booking.item = item.rental_item_id
+                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
             rental_booking.start_date = quotation.custom_rental_from_date
             rental_booking.end_date = quotation.custom_rental_to_date
             rental_booking.booking_status = "Reserved"
@@ -553,6 +551,19 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
     try:
         if not frappe.db.exists("Quotation", quotation_name):
             return {"error": f"Quotation '{quotation_name}' does not exist."}
+
+        # Idempotency Check: if a Rental Booking exists for this quotation, return early
+        existing_booking = frappe.get_all("Rental Booking", filters={"quotation": quotation_name}, limit=1)
+        if existing_booking:
+            sales_order_name = frappe.db.get_value("Rental Booking", existing_booking[0].name, "sales_order")
+            booking_names = [b.name for b in frappe.get_all("Rental Booking", filters={"quotation": quotation_name})]
+            return {
+                "message": f"Quotation '{quotation_name}' already processed.",
+                "quotation_name": quotation_name,
+                "sales_order_name": sales_order_name,
+                "rental_booking_names": booking_names
+            }
+
         quotation = frappe.get_doc("Quotation", quotation_name)
 
         # Approval enforcement
@@ -628,6 +639,30 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
 
         sales_order.insert(ignore_permissions=True)
 
+        # Create Booking Entry
+        booking_entry = frappe.new_doc("Booking Entry")
+        booking_entry.customer = quotation.party_name
+        booking_entry.quotation = quotation_name
+        booking_entry.sales_order = sales_order.name
+        booking_entry.rental_from_date = quotation.custom_rental_from_date
+        booking_entry.rental_to_date = quotation.custom_rental_to_date
+        booking_entry.actual_to_date = quotation.custom_actual_to_date
+        booking_entry.pickup_from_date = quotation.custom_rental_from_date
+        booking_entry.status = "Reserved"
+        
+        for item in quotation.custom_rental_items:
+            booking_entry.append("rental_items", {
+                "rental_item_id": item.rental_item_id,
+                "quantity": item.quantity,
+                "stock_quantity": item.stock_quantity,
+                "pricelist_name": item.pricelist_name,
+                "price": item.price,
+                "amount": item.amount
+            })
+        
+        booking_entry.insert(ignore_permissions=True)
+        booking_entry.submit()
+
         # Create Rental Bookings
         rental_booking_names = []
         for item in quotation.custom_rental_items:
@@ -641,15 +676,14 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
                 rental_booking.item = item.rental_item_id
                 rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
             else:
-                rental_booking.asset = item.rental_item_id
-                asset_doc = frappe.db.get_value("Rental Asset", item.rental_item_id, "asset_category")
-                if asset_doc:
-                    rental_booking.rental_category = asset_doc
+                rental_booking.item = item.rental_item_id
+                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
             rental_booking.start_date = quotation.custom_rental_from_date
             rental_booking.end_date = quotation.custom_rental_to_date
             rental_booking.booking_status = "Reserved"
             rental_booking.quotation = quotation_name
             rental_booking.sales_order = sales_order.name
+            rental_booking.booking_entry = booking_entry.name
             rental_booking.rental_rate = item.price
             rental_booking.deposit_amount = 0
             rental_booking.pricelist_name = item.pricelist_name
@@ -693,7 +727,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
             rental_booking_names.append(rental_booking.name)
 
         # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError
-        # sales_order.custom_booking_entry = ", ".join(rental_booking_names)
+        sales_order.custom_booking_entry = booking_entry.name
         sales_order.flags.ignore_permissions = True
         sales_order.submit()
 

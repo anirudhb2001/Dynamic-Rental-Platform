@@ -1,6 +1,6 @@
 import React from "react";
 
-const ConfirmCheckoutModal = ({ isOpen, onClose, onConfirm, title, message, cancelMessage, confirmMessage }) => {
+const ConfirmCheckoutModal = ({ isOpen, onClose, onConfirm, title, message, cancelMessage, confirmMessage, isProcessing }) => {
   if (!isOpen) return null;
 
   return (
@@ -11,15 +11,24 @@ const ConfirmCheckoutModal = ({ isOpen, onClose, onConfirm, title, message, canc
         <div className="flex justify-end space-x-4">
           <button
             onClick={onClose}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            disabled={isProcessing}
+            className={`px-4 py-2 rounded-md ${isProcessing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
           >
             {cancelMessage}
           </button>
           <button
             onClick={onConfirm}
-            className="bg-primary text-white px-4 py-2 rounded-lg shadow-sm hover:bg-primary-hover transition-colors"
+            disabled={isProcessing}
+            className={`px-4 py-2 rounded-lg shadow-sm transition-colors ${isProcessing ? 'bg-primary/70 text-white cursor-not-allowed' : 'bg-primary text-white hover:bg-primary-hover'}`}
           >
-            {confirmMessage}
+            {isProcessing ? (
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Processing...
+              </div>
+            ) : (
+              confirmMessage
+            )}
           </button>
         </div>
       </div>

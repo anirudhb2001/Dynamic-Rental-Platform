@@ -1,6 +1,6 @@
 # Copyright (c) 2026, Faircode Technologies Pvt Ltd and contributors
 # For license information, please see license.txt
-
+import frappe
 from frappe.model.document import Document
 from rental_platform.rental_platform.asset_status import update_asset_instance_status
 

@@ -2,7 +2,7 @@ import frappe
 from frappe.model.document import Document
 
 def _map_source_row(row):
-    source_type = "Rental Asset"
+    source_type = "Item"
     item = None
     serial_no = None
     rental_item_id = row.get("rental_item_id")
@@ -35,8 +35,8 @@ def _map_source_row(row):
         display_name = true_item_name
 
     return {
-        "rental_item_id": rental_item_id if source_type == "Rental Asset" else None,
-        "item_name": row.get("item_name") if source_type == "Rental Asset" else None,
+        "rental_item_id": None,
+        "item_name": None,
         "item": item,
         "serial_no": serial_no,
         "source_type": source_type,

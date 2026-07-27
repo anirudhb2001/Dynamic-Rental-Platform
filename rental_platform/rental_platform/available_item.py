@@ -32,15 +32,11 @@ def get_item_availability(start_datetime=None, end_datetime=None):
         if tracking_modes[item.item_code] == "Mixed":
             tracking_modes[item.item_code] = "Individual"
 
-    # Fetch base assets (Items and Rental Assets)
+    # Fetch base assets (Items only)
     assets = frappe.db.sql("""
         SELECT name as item_id, name as item_code, 0 as stock_qty, 'Available' as asset_status
         FROM `tabItem`
         WHERE custom_is_rental_asset = 1 AND disabled = 0
-        UNION
-        SELECT name as item_id, item as item_code, custom_stock_qty as stock_qty, asset_status
-        FROM `tabRental Asset`
-        WHERE asset_status != 'Inactive'
     """, as_dict=True)
 
     # Calculate active bookings (Grouped by item_code AND asset_instance if exists)
@@ -102,71 +98,39 @@ def get_item_availability(start_datetime=None, end_datetime=None):
         t_mode = tracking_modes.get(item_code, "Individual")
         
         if t_mode == "Individual":
-            # If it's a Rental Asset natively (legacy), treat it as an individual
-            if asset.item_id != asset.item_code:
-                # Legacy rental asset
-                stock = float(asset.stock_qty or 1)
-                booked = float(booked_qty_map_qty.get(asset.item_id, 0))  # Assuming legacy books by asset
-                available = max(0, stock - booked)
-                status = asset.asset_status
+            # Standard Item -> Fetch Asset Instances
+            asset_instances = frappe.get_all("Asset Instance", filters={"parent": item_code, "status": ["!=", "Sold"]}, fields=["registration_number", "status"])
+            for inst in asset_instances:
+                kpis["total"] += 1
+                inst_name = inst["registration_number"]
                 
-                if status == "Maintenance":
+                booked = float(booked_qty_map_sn.get(inst_name, 0))
+                stock = 1
+                available = max(0, stock - booked)
+                
+                if inst.get("status") == "Maintenance":
+                    status = "Maintenance"
                     available = 0
                     statuses = set()
                 elif available > 0:
                     status = "Available"
-                    statuses = booked_statuses_map_qty.get(asset.item_id, set())
+                    statuses = booked_statuses_map_sn.get(inst_name, set())
                 else:
-                    statuses = booked_statuses_map_qty.get(asset.item_id, set())
+                    statuses = booked_statuses_map_sn.get(inst_name, set())
                     status = "On Ride" if "Picked Up" in statuses else ("Reserved" if "Reserved" in statuses else "Unavailable")
-
-                kpis["total"] += 1
+                
                 if available > 0: kpis["available"] += 1
                 if "Reserved" in statuses: kpis["reserved"] += 1
                 if "Picked Up" in statuses or "On Ride" in statuses: kpis["onRide"] += 1
-                if asset.asset_status == "Maintenance": kpis["maintenance"] += 1
+                if inst.get("status") == "Maintenance": kpis["maintenance"] += 1
                 
                 total_items_status.append({
-                    "item_id": asset.item_id,
+                    "item_id": inst_name,
                     "stock_quantity": stock,
                     "booked_quantity": booked,
                     "available_quantity": available,
                     "status": status
                 })
-            else:
-                # Standard Item -> Fetch Asset Instances
-                asset_instances = frappe.get_all("Asset Instance", filters={"parent": item_code, "status": ["!=", "Sold"]}, fields=["registration_number", "status"])
-                for inst in asset_instances:
-                    kpis["total"] += 1
-                    inst_name = inst["registration_number"]
-                    
-                    booked = float(booked_qty_map_sn.get(inst_name, 0))
-                    stock = 1
-                    available = max(0, stock - booked)
-                    
-                    if inst.get("status") == "Maintenance":
-                        status = "Maintenance"
-                        available = 0
-                        statuses = set()
-                    elif available > 0:
-                        status = "Available"
-                        statuses = booked_statuses_map_sn.get(inst_name, set())
-                    else:
-                        statuses = booked_statuses_map_sn.get(inst_name, set())
-                        status = "On Ride" if "Picked Up" in statuses else ("Reserved" if "Reserved" in statuses else "Unavailable")
-                    
-                    if available > 0: kpis["available"] += 1
-                    if "Reserved" in statuses: kpis["reserved"] += 1
-                    if "Picked Up" in statuses or "On Ride" in statuses: kpis["onRide"] += 1
-                    if inst.get("status") == "Maintenance": kpis["maintenance"] += 1
-                    
-                    total_items_status.append({
-                        "item_id": inst_name,
-                        "stock_quantity": stock,
-                        "booked_quantity": booked,
-                        "available_quantity": available,
-                        "status": status
-                    })
         else:
             # Quantity tracking mode
             if asset.item_id == asset.item_code:

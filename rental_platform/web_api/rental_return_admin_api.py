@@ -77,8 +77,8 @@ def get_admin_return_bookings(tab="All"):
             else:
                 b["warehouse"] = frappe.db.get_value("Item Default", {"parent": b.item}, "default_warehouse") or ""
         else:
-            b["asset_name"] = frappe.db.get_value("Rental Asset", b.asset, "asset_name") or b.asset
-            b["warehouse"] = frappe.db.get_value("Rental Asset", b.asset, "location") or ""
+            b["asset_name"] = b.asset or ""
+            b["warehouse"] = ""
             
         b["customer_name"] = b.customer
         

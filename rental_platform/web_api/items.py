@@ -433,8 +433,7 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
                 fields=["registration_number", "status"]
             )
             
-            # Legacy: Also check Rental Assets if any (keeping backward compatibility)
-            rental_assets = frappe.get_all("Rental Asset", filters={"item": item["item_id"], "asset_status": ["!=", "Inactive"]}, fields=["name", "asset_status"])
+            # Legacy Rental Assets are no longer checked for runtime tracking
             
             has_assets = False
             
@@ -455,21 +454,7 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
                     new_item["status"] = inst["status"]
                     items.append(new_item)
                     
-            if rental_assets:
-                has_assets = True
-                for ra in rental_assets:
-                    new_item = item.copy()
-                    new_item["item_id"] = ra["name"]  # Legacy: keep rental asset name as ID
-                    new_item["item_code"] = item["item_id"]
-                    new_item["item_name"] = item["item_name"]
-                    new_item["asset_instance"] = ""
-                    new_item["display_name"] = f"{item['item_name']} - {ra['name']}"
-                    new_item["tracking_mode"] = "Individual"
-                    new_item["available_qty"] = 1 if ra["asset_status"] == "Available" else 0
-                    new_item["total_assets"] = 1
-                    new_item["stock_qty"] = 1
-                    new_item["status"] = ra["asset_status"]
-                    items.append(new_item)
+            # No Rental Asset check
                     
             if not has_assets:
                 # Still append the base item but mark it unavailable if no serial numbers exist
