@@ -1057,7 +1057,7 @@ const RentalAssetList = ({
                             <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                               <div>
                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                                  {asset.price_list || selectedPriceList}
+                                  {asset.pricing_label || "Rental Rate"}
                                 </p>
                                 <p className="text-2xl font-black text-slate-950">
                                   <span className="text-primary">₹</span>

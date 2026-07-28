@@ -8,6 +8,7 @@
  "field_order": [
   "company_name",
   "asset_label",
+  "pricing_label",
   "logo",
   "favicon",
   "primary_color",
@@ -75,6 +76,12 @@
    "in_list_view": 1,
    "label": "Asset Label",
    "reqd": 1
+  },
+  {
+   "default": "Rental Rate",
+   "fieldname": "pricing_label",
+   "fieldtype": "Data",
+   "label": "Pricing Label"
   },
   {
    "fieldname": "favicon",

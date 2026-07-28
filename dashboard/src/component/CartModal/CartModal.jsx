@@ -155,7 +155,7 @@ const CartModal = ({
                         <div className="mt-3 flex items-end justify-between gap-3">
                           <div>
                             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                              {item.price_list || "Rental"}
+                              {item.pricing_label || "Rental Rate"}
                             </p>
                             <p className="text-lg font-black text-slate-950">
                               <span className="text-primary">₹</span>

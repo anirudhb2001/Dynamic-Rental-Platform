@@ -417,9 +417,11 @@ def get_item_list(item_name=None ,category_id=None, brand_id=None, price_list_id
     raw_items = frappe.db.sql(query, args, as_dict=True)
 
     branding_tracking = frappe.db.get_single_value("Branding Settings", "default_asset_tracking_mode") or "Mixed"
+    pricing_label = frappe.db.get_single_value("Branding Settings", "pricing_label") or "Rental Rate"
     items = []
     
     for item in raw_items:
+        item["pricing_label"] = pricing_label
         tracking_mode = item.get("custom_asset_tracking_mode") or branding_tracking
         if tracking_mode == "Mixed":
             # If still Mixed at Item level (unlikely, but fallback), default to Individual
@@ -641,6 +643,10 @@ def get_item_list_without_page(category_id=None, brand_id=None, price_list_id=No
     """
 
     items = frappe.db.sql(query, args, as_dict=True)
+
+    pricing_label = frappe.db.get_single_value("Branding Settings", "pricing_label") or "Rental Rate"
+    for item in items:
+        item["pricing_label"] = pricing_label
 
     return {
         "items": items

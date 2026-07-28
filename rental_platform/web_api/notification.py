@@ -203,3 +203,25 @@ def mark_notification_read(notification_name):
     frappe.db.commit()
 
     return {"success": True}
+
+@frappe.whitelist()
+def mark_all_notifications_read():
+    """Mark all unread notifications for the current user as read."""
+    if frappe.session.user == "Guest":
+        return {"success": False}
+
+    or_filters = _get_notification_filters()
+    
+    unread_notifications = frappe.get_all(
+        "Rental Notification",
+        filters={"is_read": 0},
+        or_filters=or_filters,
+        pluck="name"
+    )
+    
+    if unread_notifications:
+        for name in unread_notifications:
+            frappe.db.set_value("Rental Notification", name, "is_read", 1)
+        frappe.db.commit()
+        
+    return {"success": True}

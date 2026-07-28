@@ -5,6 +5,7 @@ const Rentlistview = ({
   id,
   price,
   price_list,
+  pricing_label,
   brand,
   name,
   status,
@@ -41,7 +42,7 @@ const Rentlistview = ({
 
       <div className="flex items-center justify-between mt-auto p-3 bg-gray-50/50">
         <div>
-          <span className="font-medium text-xs text-gray-500">{price_list} </span>
+          <span className="font-medium text-xs text-gray-500 uppercase">{pricing_label || "Rental Rate"} </span>
           <span className="font-bold text-gray-900 ml-1">₹{price}</span>
         </div>
         <div className="flex text-xs items-center justify-center bg-gray-200 text-gray-700 gap-1.5 w-auto h-[22px] rounded-md px-2 font-medium">

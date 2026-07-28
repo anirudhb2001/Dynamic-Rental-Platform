@@ -112,6 +112,25 @@ function NotificationDropdown({ portalMode, isAuthenticated }) {
     }
   };
 
+  const handleMarkAllAsRead = async () => {
+    // Optimistic update: mark all as read locally
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, is_read: 1 }))
+    );
+    setUnreadCount(0);
+
+    // Server-side mark all as read
+    try {
+      await axios.post(
+        `${VITE_PUBLIC_NOTIFICATION_URL}.mark_all_notifications_read`,
+        {},
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  };
+
   // ---- Relative Timestamp ----
 
   const getRelativeTime = (dateStr) => {
@@ -196,20 +215,30 @@ function NotificationDropdown({ portalMode, isAuthenticated }) {
         >
           {/* Header */}
           <div
-            className="px-4 py-3 border-b border-gray-100 flex items-center justify-between"
+            className="px-4 py-3 border-b border-gray-100 flex flex-col gap-2"
             style={{ backgroundColor: "#f9fafb" }}
           >
-            <span className="font-semibold text-gray-900 text-sm">
-              🔔 Notifications
-            </span>
-            {unreadCount > 0 && (
-              <span
-                className="text-xs font-medium px-2 py-0.5 rounded-full text-white"
-                style={{ backgroundColor: "var(--primary-color, #e53935)" }}
-              >
-                {unreadCount} unread
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                🔔 Notifications
+                {unreadCount > 0 && (
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                    style={{ backgroundColor: "var(--primary-color, #e53935)" }}
+                  >
+                    {unreadCount} new
+                  </span>
+                )}
               </span>
-            )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleMarkAllAsRead(); }}
+                  className="text-[11px] font-medium text-gray-500 hover:text-primary transition-colors hover:underline"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Notification List */}

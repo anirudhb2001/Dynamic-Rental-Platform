@@ -110,7 +110,7 @@ function RentalAssetDetails({
               <div className="mt-[-20px] mr-0 flex flex-col justify-center items-start">
                 <img src={asset?.image} className="h-[160px] w-auto" />
                 <p className="text-[12px] mt-0">
-                  {asset?.price_list} <strong>Rs {asset?.price}</strong>
+                  <span className="uppercase">{asset?.pricing_label || "Rental Rate"}</span> <strong>Rs {asset?.price}</strong>
                 </p>
               </div>
             </div>

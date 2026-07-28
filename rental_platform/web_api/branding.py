@@ -15,6 +15,7 @@ def get_branding_settings():
         "hero_title",
         "hero_subtitle",
         "asset_label",
+        "pricing_label",
         "accent_color",
         "authentication_mode",
         "require_admin_approval",

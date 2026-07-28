@@ -154,7 +154,8 @@ def create_item_custom_fields():
     print("Creating Custom Fields for Item...")
     custom_fields = [
         {"fieldname": "custom_is_rental_asset", "fieldtype": "Check", "label": "Is Rental Asset", "insert_after": "item_group"},
-        {"fieldname": "custom_asset_tracking_mode", "fieldtype": "Select", "label": "Asset Tracking Mode", "options": "Individual\nQuantity", "default": "Individual", "insert_after": "custom_is_rental_asset", "depends_on": "eval:doc.custom_is_rental_asset==1"},
+        {"fieldname": "custom_model", "fieldtype": "Data", "label": "Model", "insert_after": "custom_is_rental_asset"},
+        {"fieldname": "custom_asset_tracking_mode", "fieldtype": "Select", "label": "Asset Tracking Mode", "options": "Individual\nQuantity", "default": "Individual", "insert_after": "custom_model", "depends_on": "eval:doc.custom_is_rental_asset==1"},
         {"fieldname": "custom_hourly_rate", "fieldtype": "Currency", "label": "Hourly Rate", "insert_after": "custom_asset_tracking_mode", "depends_on": "eval:doc.custom_is_rental_asset==1"},
         {"fieldname": "custom_daily_rate", "fieldtype": "Currency", "label": "Daily Rate", "insert_after": "custom_hourly_rate", "depends_on": "eval:doc.custom_is_rental_asset==1"},
         {"fieldname": "custom_weekly_rate", "fieldtype": "Currency", "label": "Weekly Rate", "insert_after": "custom_daily_rate", "depends_on": "eval:doc.custom_is_rental_asset==1"},

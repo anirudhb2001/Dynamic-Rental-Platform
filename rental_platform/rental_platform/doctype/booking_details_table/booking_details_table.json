@@ -23,14 +23,18 @@
   },
   {
    "fieldname": "rental_item_id",
-   "fieldtype": "Data",
-   "label": "Rental Item ID"
+   "fieldtype": "Link",
+   "label": "Rental Item ID",
+   "options": "Item",
+   "in_list_view": 1
   },
   {
    "fieldname": "item_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Item Name"
+   "label": "Item Name",
+   "fetch_from": "rental_item_id.item_name",
+   "read_only": 1
   },
   {
    "fieldname": "pricelist_name",

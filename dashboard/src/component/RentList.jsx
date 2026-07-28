@@ -47,6 +47,7 @@ const Rentlist = ({
               name={asset.name}
               image={asset.image}
               price_list={asset.price_list}
+              pricing_label={asset.pricing_label}
               quantity={quantity}
               item_name={asset.id}
               amount={totalRate}

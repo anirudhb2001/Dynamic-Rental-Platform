@@ -54,5 +54,9 @@ def search(name, price_list=None):
         as_dict=True
     )
 
+    pricing_label = frappe.db.get_single_value("Branding Settings", "pricing_label") or "Rental Rate"
+    for item in items:
+        item["pricing_label"] = pricing_label
+
     return items
 

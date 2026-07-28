@@ -563,6 +563,7 @@ function App() {
           status: finalStatus,
           price: item.price || 0,
           price_list: item.price_list_name || "N/A",
+          pricing_label: item.pricing_label || "Rental Rate",
           image: item.item_image || "",
           description: item.item_description || "No description available",
           warehouses: item.warehouse_name,
