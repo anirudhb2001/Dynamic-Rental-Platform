@@ -433,8 +433,6 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
         sales_order.custom_rental_from_date = quotation.custom_rental_from_date
         sales_order.custom_rental_to_date_ = quotation.custom_rental_to_date
         sales_order.custom_actual_to_date_ = quotation.custom_actual_to_date
-        # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError
-        # sales_order.custom_booking_entry = ", ".join(rental_booking_names)
         
         # Update Sales Order link in Rental Bookings
         for rb_name in rental_booking_names:
@@ -460,6 +458,10 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
                 "delivery_date": quotation.custom_rental_to_date
             })
         
+        # Let India Compliance / ERPNext auto-determine taxes based on Customer Address and Item SAC
+        sales_order.run_method("set_missing_values")
+        sales_order.run_method("calculate_taxes_and_totals")
+
         # Add sales person to the Sales Team child table
         if sales_person:
             sales_order.append("sales_team", {
@@ -565,12 +567,16 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None):
                 "delivery_date": quotation.custom_rental_to_date
             })
 
+        sales_order.run_method("set_missing_values")
+        sales_order.run_method("calculate_taxes_and_totals")
+
         # Add sales_person and total_allocated_percentage to sales_team child table
         if sales_person:
             sales_order.append("sales_team", {
                 "sales_person": sales_person,
                 "allocated_percentage": 100  # Set to 100 directly
             })
+
 
         sales_order.insert(ignore_permissions=True)
 

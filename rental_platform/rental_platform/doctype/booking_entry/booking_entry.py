@@ -580,3 +580,61 @@ def mark_early_return2(booking_entry, early_return_date):
         alert=True,
     )
     return amended.name
+@frappe.whitelist()
+def make_stock_entry_for_rental(booking_id):
+    be = frappe.get_doc("Booking Entry", booking_id)
+    if be.status != "Reserved":
+        frappe.throw(_("Status must be 'Reserved' to mark as rented."))
+
+    # Get Customer Warehouse
+    customer_warehouse = frappe.db.get_value('Warehouse', {'custom_is_customer_warehouse': 1}, 'name')
+    if not customer_warehouse:
+        frappe.throw(_("Customer Warehouse must be set before proceeding."))
+
+    # Get original item warehouse
+    so_warehouse, company = frappe.db.get_value("Sales Order", be.sales_order, ["set_warehouse", "company"])
+    item_wrh = so_warehouse
+    
+    if not item_wrh and company:
+        company_abbr = frappe.db.get_value("Company", company, "abbr")
+        stores_wh = f"Stores - {company_abbr}"
+        if frappe.db.exists("Warehouse", stores_wh):
+            item_wrh = stores_wh
+        else:
+            item_wrh = frappe.db.get_value("Warehouse", {"company": company, "custom_is_customer_warehouse": 0, "is_group": 0}, "name")
+            
+    if not item_wrh:
+        frappe.throw(_("No source warehouse found. Please set a Default Warehouse in Company or Sales Order."))
+
+    from frappe.utils import nowdate
+    # Create Material Transfer
+    stock_entry = frappe.new_doc('Stock Entry')
+    stock_entry.stock_entry_type = 'Material Transfer'
+    stock_entry.company = company
+    stock_entry.posting_date = nowdate()
+    stock_entry.from_warehouse = item_wrh
+    stock_entry.to_warehouse = customer_warehouse
+    stock_entry.custom_booking_entry = booking_id
+    stock_entry.custom_is_return = 0
+
+    for item in be.rental_items:
+        # Check if item is stock item
+        is_stock = frappe.db.get_value("Item", item.rental_item_id, "is_stock_item")
+        if is_stock:
+            stock_entry.append('items', {
+                'item_code': item.rental_item_id,
+                'qty': item.quantity or 1,
+                'uom': 'Nos',
+                's_warehouse': item_wrh,
+                't_warehouse': customer_warehouse,
+                'allow_zero_valuation_rate': 1
+            })
+    
+    if len(stock_entry.items) > 0:
+        stock_entry.flags.ignore_permissions = True
+        stock_entry.insert()
+        stock_entry.submit()
+    
+    be.db_set("status", "Rented")
+    
+    return {"message": "Success"}

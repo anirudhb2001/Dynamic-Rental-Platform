@@ -125,19 +125,19 @@ def create_stock_entry_on_return(booking_entry_id, item_warehouses=None):
     customer_warehouse = frappe.db.get_value('Warehouse', {'custom_is_customer_warehouse': 1}, 'name')
     doc = frappe.get_doc('Booking Entry', booking_entry_id)
 
-    # Fetch warehouse associated with Rental Services item in Sales Order
-    rental_item_wrh = frappe.db.get_all(
-        'Sales Order Item',
-        filters={'parent': doc.sales_order, 'item_code': 'Rental Services'},
-        fields=['warehouse'],
-        pluck='warehouse'
-    )
-
-    if not rental_item_wrh:
-        frappe.throw(_("No rental item warehouse found. Stock Entry creation failed."))
-
-
-    item_wrh = rental_item_wrh[0] if rental_item_wrh else None 
+    so_warehouse, company = frappe.db.get_value("Sales Order", doc.sales_order, ["set_warehouse", "company"])
+    item_wrh = so_warehouse
+    
+    if not item_wrh and company:
+        company_abbr = frappe.db.get_value("Company", company, "abbr")
+        stores_wh = f"Stores - {company_abbr}"
+        if frappe.db.exists("Warehouse", stores_wh):
+            item_wrh = stores_wh
+        else:
+            item_wrh = frappe.db.get_value("Warehouse", {"company": company, "custom_is_customer_warehouse": 0, "is_group": 0}, "name")
+            
+    if not item_wrh:
+        frappe.throw(_("No destination warehouse found. Please set a Default Warehouse in Company or Sales Order."))
     
     stock_remaining = get_remaining_items(booking_entry_id)
     
@@ -146,6 +146,7 @@ def create_stock_entry_on_return(booking_entry_id, item_warehouses=None):
         
         stock_entry = frappe.new_doc('Stock Entry')
         stock_entry.stock_entry_type = 'Material Transfer'
+        stock_entry.company = company
         stock_entry.posting_date = nowdate()
         stock_entry.from_warehouse = customer_warehouse
         stock_entry.to_warehouse = item_wrh

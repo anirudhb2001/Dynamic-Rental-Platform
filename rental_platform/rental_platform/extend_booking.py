@@ -90,15 +90,9 @@ def create_sales_order(quotation_name):
     sales_order.custom_rental_to_date = quotation.custom_rental_to_date
     sales_order.custom_actual_to_date_ = quotation.custom_actual_to_date
     sales_order.custom_is_extension = 1
-    tax_template = frappe.db.get_value(
-                "Sales Taxes and Charges Template",
-                {"company": sales_order.company},
-                "name"
-    )
-    if tax_template:
-                sales_order.taxes_and_charges = tax_template
-                sales_order.run_method("set_missing_values")
-                sales_order.run_method("calculate_taxes_and_totals")
+
+    sales_order.run_method("set_missing_values")
+    sales_order.run_method("calculate_taxes_and_totals")
     
     # Add items from Quotation to Sales Order
     for item in quotation.custom_rental_items:
@@ -386,26 +380,8 @@ def process_quotation(quotation_name, booking_entry_id):
         sales_order.custom_actual_to_date_ = quotation.custom_actual_to_date
         sales_order.custom_is_extension = 1
         be = frappe.get_doc("Booking Entry", booking_entry_id)
-        # Ensure taxes are loaded once (if template exists)
-        # Load taxes only if not already present
-        if not sales_order.taxes:
-            tax_template = frappe.db.get_value(
-                "Sales Taxes and Charges Template",
-                {"company": sales_order.company},
-                "name"
-            )
-            if tax_template:
-                sales_order.taxes_and_charges = tax_template
-                sales_order.run_method("set_taxes")  # ✅ correct method
-
-        if sales_order.taxes:
-            for tax in sales_order.taxes:
-                if be.custom_is_gst:
-                    tax.included_in_print_rate = 1  # ✅ CHECK
-                else:
-                    tax.included_in_print_rate = 0  # ❌ UNCHECK
-
-        # Recalculate after change
+        
+        sales_order.run_method("set_missing_values")
         sales_order.run_method("calculate_taxes_and_totals")
         # if be.custom_is_gst:
         #     tax_template = frappe.db.get_value(
@@ -476,23 +452,7 @@ def process_quotation(quotation_name, booking_entry_id):
         #     sales_invoice.set("taxes", [])
         #     sales_invoice.total_taxes_and_charges = 0
         #     sales_invoice.base_total_taxes_and_charges = 0
-        # Load taxes only if not already present
-        if not sales_invoice.taxes:
-            tax_template = frappe.db.get_value(
-                "Sales Taxes and Charges Template",
-                {"company": sales_invoice.company},
-                "name"
-            )
-            if tax_template:
-                sales_invoice.taxes_and_charges = tax_template
-                sales_invoice.run_method("set_taxes")  # ✅ correct method
-
-        # Toggle "Is this Tax included in Basic Rate?"
-        if sales_invoice.taxes:
-            for tax in sales_invoice.taxes:
-                tax.included_in_print_rate = 1 if be.custom_is_gst else 0
-
-        # Recalculate totals
+        sales_invoice.run_method("set_missing_values")
         sales_invoice.run_method("calculate_taxes_and_totals")
 
         # Custom Rental Items

@@ -6,30 +6,28 @@ from frappe.model.mapper import get_mapped_doc
 
 @frappe.whitelist(allow_guest=False)
 def get_returnable_bookings(customer=None, from_date=None, to_date=None):
-    filters = {"docstatus": ["<", 2], "booking_status": ["in", ["Reserved", "Picked Up", "On Ride"]]}
+    filters = {"docstatus": ["<", 2], "status": ["in", ["Reserved", "Rented", "Partially Returned"]]}
     
     if customer:
         filters["customer"] = customer
     
     if from_date:
-        filters["start_date"] = [">=", from_date]
+        filters["rental_from_date"] = [">=", from_date]
         
     if to_date:
-        filters["end_date"] = ["<=", to_date]
+        filters["rental_to_date"] = ["<=", to_date]
 
     bookings = frappe.get_all(
-        "Rental Booking",
+        "Booking Entry",
         filters=filters,
-        fields=["name", "customer", "asset", "item", "serial_no", "rental_category", "start_date", "end_date", "booking_status", "rental_rate", "quantity", "stock_quantity", "pricelist_name"],
-        order_by="end_date asc"
+        fields=["name", "customer", "rental_from_date", "rental_to_date", "actual_to_date", "status"],
+        order_by="rental_to_date asc"
     )
     
     for booking in bookings:
-        if booking.get("item"):
-            item_name = frappe.db.get_value("Item", booking["item"], "item_name")
-            booking["asset_name"] = f"{item_name} ({booking.get('serial_no', '')})" if booking.get("serial_no") else item_name
-        else:
-            booking["asset_name"] = booking.get("asset") or booking.get("item")
+        # Fetch items from Booking Details Table
+        items = frappe.get_all("Booking details Table", filters={"parent": booking["name"]}, fields=["item_name", "rental_item_id", "serial_no"])
+        booking["items"] = items
             
     return bookings
 
@@ -37,13 +35,13 @@ def get_returnable_bookings(customer=None, from_date=None, to_date=None):
 def process_rental_return(booking_id, return_date, remarks=None, damage_found=0, damage_cost=0):
     try:
         # Validate Booking
-        if not frappe.db.exists("Rental Booking", booking_id):
-            return {"error": f"Rental Booking '{booking_id}' does not exist."}
+        if not frappe.db.exists("Booking Entry", booking_id):
+            return {"error": f"Booking Entry '{booking_id}' does not exist."}
             
-        booking = frappe.get_doc("Rental Booking", booking_id)
+        booking = frappe.get_doc("Booking Entry", booking_id)
         
         if booking.docstatus != 1:
-            return {"error": "Cannot process return. The Rental Booking is not in a submitted state."}
+            return {"error": "Cannot process return. The Booking Entry is not in a submitted state."}
         
         # Approval enforcement
         from rental_platform.web_api.validate import check_portal_approval_for_customer
@@ -68,7 +66,9 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
         
         # Calculate Late Fee
         actual_return_datetime = frappe.utils.get_datetime(return_date)
-        expected_return_datetime = frappe.utils.get_datetime(booking.end_date)
+        expected_return_datetime = frappe.utils.get_datetime(booking.rental_to_date)
+        
+        pricelist_name = booking.rental_items[0].pricelist_name if booking.rental_items else None
         
         late_days = 0
         late_fee = 0
@@ -79,7 +79,7 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
             
             if delta_hours > grace_period_hours:
                 # We bill in blocks of custom_valid_hour from Price List or default 24h
-                valid_hour = frappe.db.get_value("Price List", {"name": booking.pricelist_name}, "custom_valid_hour")
+                valid_hour = frappe.db.get_value("Price List", {"name": pricelist_name}, "custom_valid_hour") if pricelist_name else 24
                 try:
                     valid_hour = int(valid_hour) if valid_hour else 24
                 except:
@@ -92,9 +92,9 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
                     # Get rate for late_fee_item
                     late_fee_rate = frappe.db.get_value(
                         "Item Price", 
-                        {"item_code": late_fee_item, "price_list": booking.pricelist_name}, 
+                        {"item_code": late_fee_item, "price_list": pricelist_name}, 
                         "price_list_rate"
-                    )
+                    ) if pricelist_name else 0
                     if not late_fee_rate:
                         late_fee_rate = frappe.db.get_value("Item", late_fee_item, "standard_rate") or 0
                     
@@ -115,8 +115,8 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
             si = frappe.new_doc("Sales Invoice")
             si.customer = booking.customer
             si.due_date = frappe.utils.nowdate()
-            si.custom_rental_from_date = booking.start_date
-            si.custom_rental_to_date = booking.end_date
+            si.custom_rental_from_date = booking.rental_from_date
+            si.custom_rental_to_date = booking.rental_to_date
             si.custom_actual_to_date = return_date
             
             if late_fee > 0:
@@ -141,28 +141,33 @@ def process_rental_return(booking_id, return_date, remarks=None, damage_found=0,
             sales_invoice_name = si.name
             
         # Create Rental Return
-        rental_return = frappe.new_doc("Rental Return")
-        rental_return.booking = booking_id
-        rental_return.customer = booking.customer
-        rental_return.asset = booking.asset
-        rental_return.item = booking.item
-        rental_return.serial_no = booking.serial_no
-        if hasattr(booking, "asset_instance"):
-            rental_return.asset_instance = booking.asset_instance
-        rental_return.rental_from_date = booking.start_date
-        rental_return.rental_to_date = booking.end_date
-        rental_return.return_date = return_date
-        rental_return.damage_found = 1 if damage_found else 0
-        rental_return.damage_cost = damage_cost
-        rental_return.remarks = remarks
-        rental_return.late_days = late_days
-        rental_return.late_fee = late_fee
-        rental_return.total_additional_charge = total_additional_charge
-        if sales_invoice_name:
-            rental_return.sales_invoice = sales_invoice_name
+        if booking.rental_items:
+            # We'll just take the first item for now to satisfy the Rental Return fields
+            # since Rental Return was originally designed for single-item bookings.
+            first_item = booking.rental_items[0]
             
-        rental_return.insert()
-        rental_return.submit()
+            rental_return = frappe.new_doc("Rental Return")
+            rental_return.booking = booking_id
+            rental_return.customer = booking.customer
+            rental_return.asset = first_item.asset if hasattr(first_item, 'asset') else None
+            rental_return.item = first_item.item if hasattr(first_item, 'item') else first_item.rental_item_id
+            rental_return.serial_no = first_item.serial_no if hasattr(first_item, 'serial_no') else None
+            if hasattr(first_item, "asset_instance"):
+                rental_return.asset_instance = first_item.asset_instance
+            
+            rental_return.expected_return_date = booking.rental_to_date
+            rental_return.actual_return_date = return_date
+            rental_return.remarks = remarks
+            
+            if sales_invoice_name:
+                rental_return.sales_invoice = sales_invoice_name
+                
+            rental_return.flags.ignore_permissions = True
+            rental_return.insert()
+            rental_return.submit()
+            
+        # Update Booking Status
+        frappe.db.set_value("Booking Entry", booking_id, "status", "Returned")
         
         return {
             "message": "Return processed successfully.",

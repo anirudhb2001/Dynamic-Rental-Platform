@@ -2,8 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Card from "./Card";
 import {
   getBeWithFinancialDetails,
-  getBookingEntryStatus,
-  getReturnableBookings
+  getBookingEntryStatus
 } from "../services/api";
 import Pagination from "./Pagination/Pagination.jsx";
 import dayjs from "dayjs";
@@ -26,7 +25,7 @@ const CardList = ({
   customerDetails,
 }) => {
 
-  const [returnViewType, setReturnViewType] = useState("rental_booking"); // "rental_booking" or "booking_entry"
+  const returnViewType = "booking_entry"; // "booking_entry"
   const [toDate, setToDate] = useState(null);
   const itemsPerPage = 12;
   const [sortOrder, setSortOrder] = useState("newest");

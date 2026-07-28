@@ -408,35 +408,8 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
         
         custom_mobile_number = customer.get("mobile_no") if customer else None
         
-        # Create Rental Bookings
-        rental_booking_names = []
-        for item in quotation.custom_rental_items:
-            rental_booking = frappe.new_doc("Rental Booking")
-            rental_booking.customer = quotation.party_name
-            #rental_booking.custom_mobile_number = custom_mobile_number  # Set mobile number if exists in Rental Booking
-            if frappe.db.exists("Serial No", item.rental_item_id):
-                rental_booking.serial_no = item.rental_item_id
-                rental_booking.item = frappe.db.get_value("Serial No", item.rental_item_id, "item_code")
-                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
-            elif frappe.db.exists("Item", item.rental_item_id):
-                rental_booking.item = item.rental_item_id
-                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
-            else:
-                rental_booking.item = item.rental_item_id
-                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
-            rental_booking.start_date = quotation.custom_rental_from_date
-            rental_booking.end_date = quotation.custom_rental_to_date
-            rental_booking.booking_status = "Reserved"
-            rental_booking.quotation = quotation_name
-            rental_booking.rental_rate = item.price
-            rental_booking.deposit_amount = 0
-            rental_booking.pricelist_name = item.pricelist_name
-            rental_booking.quantity = item.quantity
-            rental_booking.stock_quantity = item.stock_quantity
-            
-            rental_booking.insert(ignore_permissions=True)
-            rental_booking.submit()
-            rental_booking_names.append(rental_booking.name)
+        # No longer creating Rental Bookings here
+        # The Booking Entry will be created below (if needed) or by the submit_and_create_sales_order_booking method.
         
         default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
         if not default_company:
@@ -448,23 +421,6 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
         sales_order.custom_rental_from_date = quotation.custom_rental_from_date
         sales_order.custom_rental_to_date_ = quotation.custom_rental_to_date
         sales_order.custom_actual_to_date_ = quotation.custom_actual_to_date
-        # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError
-        # sales_order.custom_booking_entry = ", ".join(rental_booking_names)
-        
-        # Update Sales Order link in Rental Bookings
-        for rb_name in rental_booking_names:
-            frappe.db.set_value("Rental Booking", rb_name, "sales_order", sales_order.name)
-        tax_template = frappe.db.get_value(
-            "Sales Taxes and Charges Template",
-            {"company": sales_order.company},
-            "name"
-        )
-
-        if tax_template:
-            sales_order.taxes_and_charges = tax_template
-            
-        sales_order.run_method("set_missing_values")
-        sales_order.run_method("calculate_taxes_and_totals")
         
         # Add items to Sales Order
         for item in quotation.custom_rental_items:
@@ -486,6 +442,10 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
                 "delivery_date": quotation.custom_rental_to_date
             })
         
+        # Let India Compliance / ERPNext auto-determine taxes based on Customer Address and Item SAC
+        sales_order.run_method("set_missing_values")
+        sales_order.run_method("calculate_taxes_and_totals")
+
         # Add sales person to the Sales Team child table
         if sales_person:
             sales_order.append("sales_team", {
@@ -497,10 +457,9 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
         sales_order.submit()
         
         return {
-            "message": f"Quotation '{quotation_name}' and Sales Order '{sales_order.name}' created, and Rental Bookings '{', '.join(rental_booking_names)}' created successfully.",
+            "message": f"Quotation '{quotation_name}' and Sales Order '{sales_order.name}' created successfully.",
             "quotation_name": quotation.name,
-            "sales_order_name": sales_order.name,
-            "rental_booking_names": rental_booking_names
+            "sales_order_name": sales_order.name
         }
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Create Sales Order and Booking Entry Error")
@@ -552,16 +511,15 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
         if not frappe.db.exists("Quotation", quotation_name):
             return {"error": f"Quotation '{quotation_name}' does not exist."}
 
-        # Idempotency Check: if a Rental Booking exists for this quotation, return early
-        existing_booking = frappe.get_all("Rental Booking", filters={"quotation": quotation_name}, limit=1)
+        # Idempotency Check: if a Booking Entry exists for this quotation, return early
+        existing_booking = frappe.get_all("Booking Entry", filters={"quotation": quotation_name}, limit=1)
         if existing_booking:
-            sales_order_name = frappe.db.get_value("Rental Booking", existing_booking[0].name, "sales_order")
-            booking_names = [b.name for b in frappe.get_all("Rental Booking", filters={"quotation": quotation_name})]
+            sales_order_name = frappe.db.get_value("Booking Entry", existing_booking[0].name, "sales_order")
             return {
                 "message": f"Quotation '{quotation_name}' already processed.",
                 "quotation_name": quotation_name,
                 "sales_order_name": sales_order_name,
-                "rental_booking_names": booking_names
+                "booking_entry_name": existing_booking[0].name
             }
 
         quotation = frappe.get_doc("Quotation", quotation_name)
@@ -587,28 +545,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
         sales_order.custom_rental_from_date = quotation.custom_rental_from_date
         sales_order.custom_rental_to_date = quotation.custom_rental_to_date
         sales_order.custom_actual_to_date = quotation.custom_actual_to_date
-        #sales_order.taxes_and_charges = "Output GST In-state"
-        tax_template = frappe.db.get_value(
-            "Sales Taxes and Charges Template",
-            {"company": sales_order.company},
-            "name"
-        )
-
-        if tax_template:
-            sales_order.taxes_and_charges = tax_template
-            
-        #sales_order.run_method("set_missing_values")
-        sales_order.run_method("calculate_taxes_and_totals")
         
-        if is_inclusive_tax:
-            if sales_order.taxes:
-                for tax in sales_order.taxes:
-                    tax.included_in_print_rate = 1
-        else:
-            if sales_order.taxes:
-                for tax in sales_order.taxes:
-                    tax.included_in_print_rate = 0
-
         # Add items from Quotation to Sales Order
         for item in quotation.custom_rental_items:
             sales_order.append("custom_rental_items", {
@@ -629,6 +566,9 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
                 "amount": item.amount,
                 "delivery_date": quotation.custom_rental_to_date
             })
+
+        sales_order.run_method("set_missing_values")
+        sales_order.run_method("calculate_taxes_and_totals")
 
         # Add sales_person and total_allocated_percentage to sales_team child table
         if sales_person:
@@ -653,6 +593,7 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
         for item in quotation.custom_rental_items:
             booking_entry.append("rental_items", {
                 "rental_item_id": item.rental_item_id,
+                "item_name": item.item_name,
                 "quantity": item.quantity,
                 "stock_quantity": item.stock_quantity,
                 "pricelist_name": item.pricelist_name,
@@ -663,79 +604,47 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
         booking_entry.insert(ignore_permissions=True)
         booking_entry.submit()
 
-        # Create Rental Bookings
-        rental_booking_names = []
-        for item in quotation.custom_rental_items:
-            rental_booking = frappe.new_doc("Rental Booking")
-            rental_booking.customer = quotation.party_name
-            if frappe.db.exists("Serial No", item.rental_item_id):
-                rental_booking.serial_no = item.rental_item_id
-                rental_booking.item = frappe.db.get_value("Serial No", item.rental_item_id, "item_code")
-                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
-            elif frappe.db.exists("Item", item.rental_item_id):
-                rental_booking.item = item.rental_item_id
-                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
-            else:
-                rental_booking.item = item.rental_item_id
-                rental_booking.item_group = frappe.db.get_value("Item", rental_booking.item, "item_group")
-            rental_booking.start_date = quotation.custom_rental_from_date
-            rental_booking.end_date = quotation.custom_rental_to_date
-            rental_booking.booking_status = "Reserved"
-            rental_booking.quotation = quotation_name
-            rental_booking.sales_order = sales_order.name
-            rental_booking.booking_entry = booking_entry.name
-            rental_booking.rental_rate = item.price
-            rental_booking.deposit_amount = 0
-            rental_booking.pricelist_name = item.pricelist_name
-            rental_booking.quantity = item.quantity
-            rental_booking.stock_quantity = item.stock_quantity
-            rental_booking.insert(ignore_permissions=True)
-            rental_booking.submit()
+        # --- Notification Trigger: Admin Booking ---
+        try:
+            from rental_platform.web_api.notification import create_admin_notification
+            create_admin_notification(
+                title="New Booking",
+                message=f"{quotation.party_name} placed a new booking",
+                notification_type="Booking",
+                reference_doctype="Booking Entry",
+                reference_name=booking_entry.name,
+                priority="High",
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Admin Booking Notification Error")
 
-            # --- Notification Trigger: Admin Booking ---
-            try:
-                from rental_platform.web_api.notification import create_admin_notification, create_notification
-                create_admin_notification(
-                    title="New Booking",
-                    message=f"{quotation.party_name} booked {item.item_name}",
-                    notification_type="Booking",
-                    reference_doctype="Rental Booking",
-                    reference_name=rental_booking.name,
-                    priority="High",
-                )
-            except Exception:
-                frappe.log_error(frappe.get_traceback(), "Admin Booking Notification Error")
+        # --- Notification Trigger: Customer Booking Confirmation ---
+        try:
+            from rental_platform.web_api.notification import create_notification
+            customer_mobile = frappe.db.get_value("Customer", quotation.party_name, "mobile_no")
+            customer_user = frappe.db.get_value("User", {"mobile_no": customer_mobile}, "name") if customer_mobile else None
+            create_notification(
+                title="Booking Confirmed",
+                message=f"Your booking has been confirmed",
+                notification_type="Booking Confirmation",
+                customer=quotation.party_name,
+                user=customer_user,
+                reference_doctype="Booking Entry",
+                reference_name=booking_entry.name,
+                priority="High",
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Customer Booking Notification Error")
 
-            # --- Notification Trigger: Customer Booking Confirmation ---
-            try:
-                from rental_platform.web_api.notification import create_notification
-                customer_mobile = frappe.db.get_value("Customer", quotation.party_name, "mobile_no")
-                customer_user = frappe.db.get_value("User", {"mobile_no": customer_mobile}, "name") if customer_mobile else None
-                create_notification(
-                    title="Booking Confirmed",
-                    message=f"Your booking for {item.item_name} has been confirmed",
-                    notification_type="Booking Confirmation",
-                    customer=quotation.party_name,
-                    user=customer_user,
-                    reference_doctype="Rental Booking",
-                    reference_name=rental_booking.name,
-                    priority="High",
-                )
-            except Exception:
-                frappe.log_error(frappe.get_traceback(), "Customer Booking Notification Error")
-
-            rental_booking_names.append(rental_booking.name)
-
-        # custom_booking_entry links to Booking Entry doctype (not Rental Booking) — skip to avoid LinkValidationError
         sales_order.custom_booking_entry = booking_entry.name
         sales_order.flags.ignore_permissions = True
         sales_order.submit()
 
         return {
-            "message": f"Quotation '{quotation_name}' submitted, and Sales Order '{sales_order.name}' & Rental Bookings '{', '.join(rental_booking_names)}' created successfully.",
+            "message": f"Quotation '{quotation_name}' submitted, and Sales Order '{sales_order.name}' & Booking Entry '{booking_entry.name}' created successfully.",
             "quotation_name": quotation.name,
             "sales_order_name": sales_order.name,
-            "rental_booking_names": rental_booking_names
+            "booking_entry_name": booking_entry.name
         }
 
     except Exception as e:
@@ -1034,3 +943,56 @@ def debug_no_dates():
         if x["item_id"] == "Honda Activa":
             print(json.dumps(x, indent=2))
             break
+
+@frappe.whitelist(allow_guest=True)
+def estimate_cart_taxes(quotation_name):
+    try:
+        if not frappe.db.exists("Quotation", quotation_name):
+            return {"error": f"Quotation '{quotation_name}' does not exist."}
+        
+        quotation = frappe.get_doc("Quotation", quotation_name)
+        
+        # We need to temporarily create a dummy Sales Order in memory to calculate taxes accurately.
+        # This is because taxes are often based on Customer Address which India Compliance computes on Sales Order/Invoice
+        sales_order = frappe.new_doc("Sales Order")
+        sales_order.company = quotation.company
+        sales_order.customer = quotation.party_name
+        
+        for item in quotation.custom_rental_items:
+            sales_order.append("custom_rental_items", {
+                "rental_item_id": item.rental_item_id,
+                "item_name": item.item_name,
+                "quantity": item.quantity,
+                "pricelist_name": item.pricelist_name,
+                "price": item.price,
+                "amount": item.amount
+            })
+            
+        for item in quotation.items:
+            sales_order.append("items", {
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "rate": item.rate,
+                "amount": item.amount
+            })
+            
+        sales_order.run_method("set_missing_values")
+        sales_order.run_method("calculate_taxes_and_totals")
+        
+        taxes = []
+        for tax in sales_order.taxes:
+            taxes.append({
+                "account_head": tax.account_head,
+                "rate": tax.rate,
+                "tax_amount": tax.tax_amount,
+                "description": tax.description
+            })
+            
+        return {
+            "total_taxes_and_charges": sales_order.total_taxes_and_charges,
+            "grand_total": sales_order.grand_total,
+            "taxes": taxes
+        }
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Estimate Cart Taxes Error")
+        return {"error": f"An error occurred: {str(e)}"}

@@ -16,6 +16,7 @@ import {
   extendBooking,
   updateAdditionalDiscount,
   getBrandingSettings,
+  estimateCartTaxes,
 } from "../../services/api.jsx";
 import ConfirmCheckoutModal from "../ConfirmationModal/ConfirmCheckoutModal.jsx";
 import QuotationSubmitModal from "../ConfirmationModal/QuotationSubmitModal.jsx";
@@ -67,6 +68,7 @@ function RentalCart({
   const timerRef = useRef(null);
   const [isInclusiveTax, setIsInclusiveTax] = useState(false);
   const [authMode, setAuthMode] = useState("OTP Login");
+  const [estimatedTaxes, setEstimatedTaxes] = useState(0);
 
   const isPendingApproval = portalMode === "customer" && customerDetails?.portal_approval_status === "Pending";
 
@@ -561,6 +563,30 @@ function RentalCart({
     setDisplayDiscount(initialTotal);
   }, [mainCartItems]);
 
+  useEffect(() => {
+    const fetchTaxes = async () => {
+      if (quotationNames && quotationNames.length > 0) {
+        const qName = quotationNames[quotationNames.length - 1] || quotationNames[0];
+        try {
+          const data = await estimateCartTaxes(qName);
+          const taxData = data.message || data;
+          if (taxData && taxData.total_taxes_and_charges !== undefined) {
+            setEstimatedTaxes(taxData.total_taxes_and_charges);
+            // Optionally we can include it in total, but let's just show it separately
+          } else {
+            setEstimatedTaxes(0);
+          }
+        } catch (err) {
+          console.error("Failed to estimate taxes:", err);
+          setEstimatedTaxes(0);
+        }
+      } else {
+        setEstimatedTaxes(0);
+      }
+    };
+    fetchTaxes();
+  }, [mainCartItems, quotationNames]);
+
   const [useAmount, setUseAmount] = useState(false);
   const [usePercentage, setUsePercentage] = useState(false);
 
@@ -954,7 +980,7 @@ function RentalCart({
           <div
             className={`bg-gray-50 border border-gray-200 h-10 p-2 rounded-lg w-full flex items-center`}
           >
-            <span className="text-gray-500 font-medium">Total:</span>
+            <span className="text-gray-500 font-medium">Total (Excl. Tax):</span>
             <span className="ml-2 font-bold text-gray-900 text-base">
               Rs{" "}
               {typeof displayDiscount === "number"
@@ -962,6 +988,29 @@ function RentalCart({
                 : typeof displayDiscount === "object" && displayDiscount?.total
                 ? displayDiscount.total.toFixed(2)
                 : 0}
+            </span>
+          </div>
+
+          <div
+            className={`bg-gray-50 border border-gray-200 h-10 p-2 rounded-lg w-full flex items-center mt-2`}
+          >
+            <span className="text-gray-500 font-medium">Estimated GST:</span>
+            <span className="ml-2 font-bold text-gray-900 text-base">
+              Rs {estimatedTaxes.toFixed(2)}
+            </span>
+          </div>
+
+          <div
+            className={`bg-primary/10 border border-primary/20 h-12 p-2 rounded-lg w-full flex items-center mt-2`}
+          >
+            <span className="text-primary-700 font-bold">Grand Total:</span>
+            <span className="ml-2 font-black text-primary-800 text-lg">
+              Rs{" "}
+              {((typeof displayDiscount === "number"
+                ? displayDiscount
+                : typeof displayDiscount === "object" && displayDiscount?.total
+                ? displayDiscount.total
+                : 0) + estimatedTaxes).toFixed(2)}
             </span>
           </div>
 

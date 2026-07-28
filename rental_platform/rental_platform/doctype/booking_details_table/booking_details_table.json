@@ -5,17 +5,19 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [
-  "section_break_1hho",
-  "rental_item_id",
-  "item_name",
-  "pricelist_name",
-  "price",
-  "quantity",
-  "stock_quantity",
-  "amount",
-  "returned_item"
- ],
+  "field_order": [
+   "section_break_1hho",
+   "rental_item_id",
+   "item_name",
+   "serial_no",
+   "asset_instance",
+   "pricelist_name",
+   "price",
+   "quantity",
+   "stock_quantity",
+   "amount",
+   "returned_item"
+  ],
  "fields": [
   {
    "fieldname": "section_break_1hho",
@@ -35,6 +37,18 @@
    "label": "Item Name",
    "fetch_from": "rental_item_id.item_name",
    "read_only": 1
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Link",
+   "label": "Serial No",
+   "options": "Serial No"
+  },
+  {
+   "fieldname": "asset_instance",
+   "fieldtype": "Link",
+   "label": "Asset Instance",
+   "options": "Asset Instance"
   },
   {
    "fieldname": "pricelist_name",

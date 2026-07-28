@@ -30,11 +30,12 @@ def get_dashboard_stats():
     # For now, Dashboard KPI for quantity just needs available stock. 
     # To be fully accurate, we count reserved/rented from Rental Booking.
     active_qty_bookings = frappe.db.sql("""
-        SELECT booking_status, SUM(quantity) as qty
-        FROM `tabRental Booking`
-        WHERE booking_status IN ('Reserved', 'Picked Up')
-        AND item IN %s
-        GROUP BY booking_status
+        SELECT b.status as booking_status, SUM(d.quantity) as qty
+        FROM `tabBooking Entry` b
+        JOIN `tabBooking details Table` d ON d.parent = b.name
+        WHERE b.status IN ('Reserved', 'Picked Up')
+        AND d.rental_item_id IN %s
+        GROUP BY b.status
     """, (item_codes,) if quantity_items else ([""],), as_dict=True)
 
     reserved_qty = 0

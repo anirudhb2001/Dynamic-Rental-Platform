@@ -42,20 +42,22 @@ def get_item_availability(start_datetime=None, end_datetime=None):
     # Calculate active bookings (Grouped by item_code AND asset_instance if exists)
     active_bookings = frappe.db.sql("""
         SELECT
-            IFNULL(item, asset) AS item_code,
-            IFNULL(asset_instance, serial_no) AS asset_instance,
-            booking_status,
-            SUM(quantity) AS total_booked
+            d.rental_item_id AS item_code,
+            IFNULL(d.asset_instance, d.serial_no) AS asset_instance,
+            b.status AS booking_status,
+            SUM(d.quantity) AS total_booked
         FROM
-            `tabRental Booking`
+            `tabBooking Entry` b
+        JOIN
+            `tabBooking details Table` d ON d.parent = b.name
         WHERE
-            booking_status NOT IN ('Returned', 'Completed', 'Cancelled', 'Draft')
+            b.status NOT IN ('Returned', 'Completed', 'Cancelled', 'Draft')
             AND (
-                start_date < %(end_datetime)s
-                AND end_date > %(start_datetime)s
+                b.rental_from_date < %(end_datetime)s
+                AND b.rental_to_date > %(start_datetime)s
             )
         GROUP BY
-            IFNULL(item, asset), IFNULL(asset_instance, serial_no), booking_status
+            d.rental_item_id, IFNULL(d.asset_instance, d.serial_no), b.status
     """, {
         "start_datetime": start_datetime,
         "end_datetime": end_datetime,

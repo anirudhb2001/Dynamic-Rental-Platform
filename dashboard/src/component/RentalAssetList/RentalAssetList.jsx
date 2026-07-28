@@ -55,6 +55,7 @@ const RentalAssetList = ({
   setIsCartOpen,
   isCartOpen,
   addToast,
+  quotationNames,
   currentPage,
   totalPages,
   pageNumbers,
@@ -1154,6 +1155,7 @@ const RentalAssetList = ({
                   openModal={openModal}
                   hasProductBundle={hasProductBundle}
                   selectedAsset={selectedAsset}
+                  quotationNames={quotationNames}
                   closeModal={closeModal}
                   addToCart={addToCart}
                   cartItems={safeCartItems}

@@ -826,3 +826,16 @@ export const processRentalReturn = async (
     throw error;
   }
 };
+
+export const estimateCartTaxes = async (quotationName) => {
+  try {
+    const response = await axios.post(
+      `${VITE_PUBLIC_API_URL}/api/method/rental_platform.web_api.cart.estimate_cart_taxes`,
+      { quotation_name: quotationName }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error estimating cart taxes:", error);
+    throw error.response?.data || error;
+  }
+};

@@ -28,7 +28,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Booking",
-   "options": "Rental Booking",
+   "options": "Booking Entry",
    "reqd": 1
   },
   {

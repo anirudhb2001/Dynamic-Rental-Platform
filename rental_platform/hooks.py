@@ -177,8 +177,7 @@ doc_events = {
         "before_submit":"rental_platform.web_api.Updatestatus.create_stock_entry_on_sales_invoice_submit",
         "validate":"rental_platform.web_api.validate.sales_invoice_validate",
         "before_save": "rental_platform.rental_platform.custom_sales_invoice.fetch_booking_details",
-        "autoname": "rental_platform.web_api.naming.sales_invoice_naming",
-        "before_insert": "rental_platform.web_api.booking_gst_tax_handler.before_insert"
+        "autoname": "rental_platform.web_api.naming.sales_invoice_naming"
         },
     "Warehouse": {
         "validate": "rental_platform.web_api.validate.warehouse_validate"
@@ -186,9 +185,7 @@ doc_events = {
     "Customer": {
         "validate": "rental_platform.web_api.validate.validate_customer_verification",
     },
-    "Rental Booking": {
-        "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
-    },
+
     "Quotation": {
         "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
     },

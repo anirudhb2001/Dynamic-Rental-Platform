@@ -3,12 +3,6 @@
 
 frappe.ui.form.on("Booking Entry", {
   refresh(frm) {
-
-    //if (frm.doc.docstatus !== 1) return;
-
-
-
-
     if (frm.doc.docstatus === 1) {
       frm.add_custom_button(__("Add Payment"), function () {
         frappe.call({
@@ -30,20 +24,18 @@ frappe.ui.form.on("Booking Entry", {
         });
       });
     }
-  },
-  refresh(frm) {
-    //console.log("Booking Entry status:", frm.doc.status);
+
     if (frm.doc.custom_returned_early) {
-            frm.dashboard.add_indicator(__("Returned Early"), "orange");
-            return;
+      frm.dashboard.add_indicator(__("Returned Early"), "orange");
+      return;
     }
+    
     frm.add_custom_button(__("Mark Early Return"), () => {
-            show_early_return_dialog(frm);
+      show_early_return_dialog(frm);
     }).addClass("btn-warning");
 
     // Show button only when the status is 'Reserved'
     if (frm.doc.status === "Reserved") {
-      //console.log("Adding Cancel Booking button for status:", frm.doc.status);
       frm
         .add_custom_button(__("Cancel Booking"), function () {
           frappe.confirm(
@@ -74,10 +66,39 @@ frappe.ui.form.on("Booking Entry", {
           );
         })
         .addClass("btn-dark");
+
+      // Mark as Rented Button
+      frm.add_custom_button(__("Mark as Rented"), function () {
+        frappe.confirm(
+          __("This will transfer stock to the customer warehouse. Continue?"),
+          function () {
+            frappe.call({
+              method:
+                "rental_platform.rental_platform.doctype.booking_entry.booking_entry.make_stock_entry_for_rental",
+              args: {
+                booking_id: frm.doc.name,
+              },
+              freeze: true,
+              freeze_message: __("Processing..."),
+              callback: function (response) {
+                if (response.message) {
+                  frappe.msgprint(
+                    __("Booking {0} is now Rented. Stock Transferred.", [
+                      frm.doc.name,
+                    ])
+                  );
+                  frm.reload_doc();
+                } else {
+                  frappe.msgprint(__("Error updating status."));
+                }
+              },
+            });
+          }
+        );
+      }).addClass("btn-primary");
     }
   },
 });
-
 
 function show_early_return_dialog(frm) {
     const d = new frappe.ui.Dialog({

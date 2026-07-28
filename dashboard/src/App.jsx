@@ -812,6 +812,7 @@ function App() {
                   setExtendReturnDate={setExtendReturnDate}
                   isLoading={isLoading}
                   addToast={addToast}
+                  quotationNames={quotationNames}
                   setIsUserWarehouse={setIsUserWarehouse}
                   isUserWarehouse={isUserWarehouse}
                   setMainCartItems={setMainCartItems}
@@ -856,6 +857,7 @@ function App() {
                   setIsCartOpen={setIsCartOpen}
                   isCartOpen={isCartOpen}
                   addToast={addToast}
+                  quotationNames={quotationNames}
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
                   totalPages={totalPages}
@@ -884,7 +886,8 @@ function App() {
                 />
               ) : activeComponent === "returnDashboard" ? (
                 <ReturnDashboard 
-                  addToast={addToast} 
+                  addToast={addToast}
+                  quotationNames={quotationNames} 
                   portalMode={portalMode} 
                   branding={brandingData}
                   filterCustomer={filterCustomer}
@@ -898,6 +901,7 @@ function App() {
               ) : (
                 <CardList
                   addToast={addToast}
+                  quotationNames={quotationNames}
                   onRedirectToRentalAssetList={handleRedirectToRentalAssetList}
                   financialData={financialData}
                   setFinancialData={setFinancialData}

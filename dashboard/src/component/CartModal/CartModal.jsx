@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { estimateCartTaxes } from "../../services/api.jsx";
 import {
   LuPackage,
   LuChevronDown,
@@ -14,6 +15,7 @@ const CartModal = ({
   closeCart,
   Quantity,
   onContinueToCheckout,
+  quotationNames,
 }) => {
 
   console.log("CartModal received:", cartItems);
@@ -32,6 +34,31 @@ const CartModal = ({
     const quantity = Number(item.quantity ?? 1);
     return total + amount * (Number.isFinite(quantity) ? quantity : 1);
   }, 0);
+
+  const [estimatedTaxes, setEstimatedTaxes] = useState(0);
+
+  useEffect(() => {
+    const fetchTaxes = async () => {
+      if (quotationNames && quotationNames.length > 0) {
+        const qName = quotationNames[quotationNames.length - 1] || quotationNames[0];
+        try {
+          const data = await estimateCartTaxes(qName);
+          const taxData = data.message || data;
+          if (taxData && taxData.total_taxes_and_charges !== undefined) {
+            setEstimatedTaxes(taxData.total_taxes_and_charges);
+          } else {
+            setEstimatedTaxes(0);
+          }
+        } catch (err) {
+          console.error("Failed to estimate taxes:", err);
+          setEstimatedTaxes(0);
+        }
+      } else {
+        setEstimatedTaxes(0);
+      }
+    };
+    fetchTaxes();
+  }, [cartItems, quotationNames]);
 
   const getStatusClasses = (status) => {
     switch ((status || "available").toLowerCase()) {
@@ -234,6 +261,22 @@ const CartModal = ({
               </span>
               <span className="text-2xl font-black">
                 ₹{estimatedRentalCost.toLocaleString("en-IN")}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-white/60">
+                Estimated GST
+              </span>
+              <span className="text-lg font-bold text-white/80">
+                ₹{estimatedTaxes.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between pt-2 border-t border-white/10">
+              <span className="text-sm font-bold text-white">
+                Grand Total
+              </span>
+              <span className="text-2xl font-black text-white">
+                ₹{(estimatedRentalCost + estimatedTaxes).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>

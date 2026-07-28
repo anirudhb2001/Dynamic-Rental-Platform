@@ -72,6 +72,7 @@ const Rentlist = ({
           closeCart={closeCart}
           onContinueToCheckout={onContinueToCheckout}
           Quantity={safeQuantities}
+          quotationNames={quotationNames}
         /> 
       )}
     </div>
