@@ -5,10 +5,13 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import ReservationModal from "./ReservationModal";
 import ReservationExtensionModal from "./ReservationExtensionModal";
 import ReservationDetails from "./ReservationDetails";
+import { getHotelProperties, getAllVenueReservations } from "../../services/api";
 
 const localizer = momentLocalizer(moment);
 
 const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => {
+  const [hotelProperties, setHotelProperties] = useState([]);
+  const [filterHotel, setFilterHotel] = useState("");
   const [events, setEvents] = useState([]);
   
   // Modals state
@@ -20,10 +23,41 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
   const [selectedBooking, setSelectedBooking] = useState(null);
 
   useEffect(() => {
-    if (allBookingData && Array.isArray(allBookingData)) {
+    const fetchHotels = async () => {
+      try {
+        const hList = await getHotelProperties();
+        setHotelProperties(hList || []);
+      } catch (err) {
+        console.error("Failed to load hotels for filter", err);
+      }
+    };
+    fetchHotels();
+  }, []);
+
+  const [calendarBookings, setCalendarBookings] = useState([]);
+
+  const fetchCalendarBookings = async () => {
+    try {
+      const data = await getAllVenueReservations();
+      setCalendarBookings(data || []);
+    } catch (err) {
+      console.error("Failed to load venue reservations for calendar", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCalendarBookings();
+  }, []);
+
+  useEffect(() => {
+    if (calendarBookings && Array.isArray(calendarBookings)) {
       const calendarEvents = [];
       
-      allBookingData.forEach((booking) => {
+      const filteredData = filterHotel 
+        ? calendarBookings.filter(b => b.hotel_property === filterHotel)
+        : calendarBookings;
+        
+      filteredData.forEach((booking) => {
         // Original Reservation Event
         const startDate = moment(booking.event_date || booking.date).toDate();
         const endDate = moment(startDate).add(1, "hours").toDate();
@@ -53,7 +87,7 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
       });
       setEvents(calendarEvents);
     }
-  }, [allBookingData]);
+  }, [calendarBookings, filterHotel]);
 
   const handleSelectEvent = (event) => {
     setSelectedBooking(event.resource);
@@ -75,13 +109,25 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
     <div className="w-full flex flex-col h-[calc(100vh-6rem)] rounded-3xl bg-white/45 p-5 backdrop-blur-xl">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-black text-slate-800">Availability Calendar</h2>
-        <button 
-          onClick={() => { setSelectedDate(null); setIsNewModalOpen(true); }}
-          className="px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md transition-all flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          New Reservation
-        </button>
+        <div className="flex items-center gap-4">
+          <select 
+            value={filterHotel} 
+            onChange={(e) => setFilterHotel(e.target.value)}
+            className="p-2.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none min-w-[200px]"
+          >
+            <option value="">All Properties</option>
+            {hotelProperties.map(h => (
+              <option key={h.name} value={h.name}>{h.hotel_name || h.name}</option>
+            ))}
+          </select>
+          <button 
+            onClick={() => { setSelectedDate(null); setIsNewModalOpen(true); }}
+            className="px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md transition-all flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            New Reservation
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 overflow-hidden">
@@ -96,6 +142,27 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
           onSelectSlot={handleSelectSlot}
           views={["month", "week", "day"]}
           popup={true}
+          eventPropGetter={(event) => {
+            let backgroundColor = "#3b82f6"; // default blue
+            if (event.resource?.status === "Reserved") backgroundColor = "#10b981"; // green
+            if (event.resource?.status === "Cancelled") backgroundColor = "#ef4444"; // red
+            if (event.resource?.status === "Completed") backgroundColor = "#6366f1"; // indigo
+            
+            return {
+              style: {
+                backgroundColor,
+                borderRadius: "6px",
+                opacity: 0.9,
+                color: "white",
+                border: "none",
+                display: "block",
+                padding: "2px 5px",
+                fontWeight: "500",
+                fontSize: "12px",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
+              }
+            };
+          }}
         />
       </div>
 
@@ -104,7 +171,10 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
         onClose={() => setIsNewModalOpen(false)} 
         initialDate={selectedDate}
         addToast={addToast}
-        onReservationCreated={refreshBookings}
+        onReservationCreated={() => {
+          fetchCalendarBookings();
+          if (refreshBookings) refreshBookings();
+        }}
       />
 
       <ReservationExtensionModal
@@ -112,7 +182,10 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
         onClose={() => setIsExtModalOpen(false)}
         originalBooking={selectedBooking}
         addToast={addToast}
-        onExtensionCreated={refreshBookings}
+        onExtensionCreated={() => {
+          fetchCalendarBookings();
+          if (refreshBookings) refreshBookings();
+        }}
       />
 
       <ReservationDetails
@@ -121,7 +194,10 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
         bookingName={selectedBooking ? selectedBooking.name : null}
         addToast={addToast}
         onExtendClick={handleExtendClick}
-        onInvoiceCreated={refreshBookings}
+        onInvoiceCreated={() => {
+          fetchCalendarBookings();
+          if (refreshBookings) refreshBookings();
+        }}
       />
     </div>
   );

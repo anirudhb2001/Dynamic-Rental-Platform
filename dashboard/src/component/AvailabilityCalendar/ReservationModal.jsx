@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { getCustomerLists, getVenues, getEventTypes, getTimeSlots, checkVenueAvailability, createVenueReservation } from "../../services/api";
+import { searchCustomers, getHotelProperties, getSeatingTypes, getVenues, getEventTypes, getTimeSlots, checkVenueAvailability, createVenueReservation } from "../../services/api";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 
-const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservationCreated }) => {
+const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservationCreated, initialHotel, initialVenue }) => {
   const [customers, setCustomers] = useState([]);
+  const [hotelProperties, setHotelProperties] = useState([]);
+  const [seatingTypes, setSeatingTypes] = useState([]);
   const [venues, setVenues] = useState([]);
   const [eventTypes, setEventTypes] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
 
   const [formData, setFormData] = useState({
     customer: "",
-    venue: "",
+    hotel_property: initialHotel || "",
+    venue: initialVenue || "",
     event_type: "",
     event_date: initialDate || "",
     time_slot: "",
+    seating_type: "",
     guest_count: 0,
     special_instructions: "",
   });
@@ -24,9 +32,14 @@ const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservatio
   useEffect(() => {
     if (isOpen) {
       fetchMasterData();
-      setFormData(prev => ({ ...prev, event_date: initialDate || "" }));
+      setFormData(prev => ({ 
+        ...prev, 
+        event_date: initialDate || prev.event_date,
+        hotel_property: initialHotel || prev.hotel_property,
+        venue: initialVenue || prev.venue
+      }));
     }
-  }, [isOpen, initialDate]);
+  }, [isOpen, initialDate, initialHotel, initialVenue]);
 
   useEffect(() => {
     if (formData.venue && formData.event_date && formData.time_slot) {
@@ -38,8 +51,14 @@ const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservatio
 
   const fetchMasterData = async () => {
     try {
-      const custList = await getCustomerLists();
+      const custList = await searchCustomers("");
       setCustomers(Array.isArray(custList) ? custList : []);
+
+      const hotelList = await getHotelProperties();
+      setHotelProperties(Array.isArray(hotelList) ? hotelList : []);
+
+      const stList = await getSeatingTypes();
+      setSeatingTypes(Array.isArray(stList) ? stList : []);
 
       const venueList = await getVenues();
       setVenues(Array.isArray(venueList) ? venueList : []);
@@ -72,11 +91,30 @@ const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservatio
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "hotel_property") {
+      setFormData({ ...formData, hotel_property: value, venue: "" });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
+  const getCapacityWarning = () => {
+    if (!formData.venue || !formData.seating_type || !formData.guest_count) return null;
+    const selectedVenue = venues.find(v => v.name === formData.venue);
+    if (!selectedVenue || !selectedVenue.seating_capacities) return null;
+    
+    const capacityRow = selectedVenue.seating_capacities.find(sc => sc.seating_type === formData.seating_type);
+    if (capacityRow && parseInt(formData.guest_count) > parseInt(capacityRow.capacity)) {
+      return `Guest count ${formData.guest_count} exceeds the ${formData.seating_type} capacity of ${capacityRow.capacity} for ${selectedVenue.item_name || formData.venue}.`;
+    }
+    return null;
+  };
+  
+  const capacityWarning = getCapacityWarning();
+
   const handleSubmit = async () => {
-    if (!formData.customer || !formData.venue || !formData.event_type || !formData.event_date || !formData.time_slot) {
+    if (!formData.customer || !formData.hotel_property || !formData.venue || !formData.event_type || !formData.event_date || !formData.time_slot || !formData.seating_type) {
       addToast("Please fill all required fields", "warning");
       return;
     }
@@ -109,28 +147,77 @@ const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservatio
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Customer *</label>
-            <select name="customer" value={formData.customer} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none">
-              <option value="">Select Customer</option>
-              {customers.map(c => (
-                <option key={c.name} value={c.name}>{c.customer_name || c.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                onChange={async (e) => {
+                   const term = e.target.value;
+                   if (term.length > 1 || term.length === 0) {
+                     const results = await searchCustomers(term);
+                     setCustomers(results || []);
+                   }
+                }} 
+                className="w-1/3 p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none"
+              />
+              <select name="customer" value={formData.customer} onChange={handleChange} className="w-2/3 p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none">
+                <option value="">Select Customer</option>
+                {customers.map(c => (
+                  <option key={c.name} value={c.name}>{c.customer_name || c.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Venue *</label>
-            <select name="venue" value={formData.venue} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none">
-              <option value="">Select Venue</option>
-              {venues.map(v => (
-                <option key={v.name} value={v.name}>{v.item_name || v.name}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Hotel Property *</label>
+              <select name="hotel_property" value={formData.hotel_property} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none">
+                <option value="">Select Hotel</option>
+                {hotelProperties.map(h => (
+                  <option key={h.name} value={h.name}>{h.hotel_name || h.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Venue *</label>
+              <select name="venue" value={formData.venue} onChange={handleChange} disabled={!formData.hotel_property} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none disabled:opacity-50">
+                <option value="">Select Venue</option>
+                {venues.filter(v => v.hotel_property === formData.hotel_property).map(v => (
+                  <option key={v.name} value={v.name}>{v.item_name || v.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Event Date *</label>
-              <input type="date" name="event_date" value={formData.event_date} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none" />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  format="DD/MM/YYYY"
+                  value={formData.event_date ? dayjs(formData.event_date) : null}
+                  onChange={(newValue) => {
+                    handleChange({
+                      target: {
+                        name: "event_date",
+                        value: newValue ? newValue.format("YYYY-MM-DD") : ""
+                      }
+                    });
+                  }}
+                  slotProps={{ 
+                    textField: { 
+                      fullWidth: true,
+                      size: "small",
+                      sx: { 
+                        '& .MuiInputBase-root': { borderRadius: '0.75rem', backgroundColor: '#f8fafc', height: '44px' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' }
+                      }
+                    } 
+                  }}
+                />
+              </LocalizationProvider>
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Time Slot *</label>
@@ -160,8 +247,20 @@ const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservatio
               </select>
             </div>
             <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Seating Type *</label>
+              <select name="seating_type" value={formData.seating_type} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none">
+                <option value="">Select Seating Type</option>
+                {seatingTypes.map(st => (
+                  <option key={st.name} value={st.name}>{st.type_name || st.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Guest Count</label>
               <input type="number" name="guest_count" value={formData.guest_count} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none" />
+              {capacityWarning && (
+                <p className="text-red-500 text-xs mt-1 font-medium">{capacityWarning}</p>
+              )}
             </div>
           </div>
 
@@ -174,9 +273,9 @@ const ReservationModal = ({ isOpen, onClose, initialDate, addToast, onReservatio
             <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Cancel</button>
             <button 
               onClick={handleSubmit} 
-              disabled={!isAvailable || isChecking || isSubmitting}
+              disabled={!isAvailable || isChecking || isSubmitting || capacityWarning}
               className={`px-5 py-2.5 rounded-xl font-semibold text-white transition-colors ${
-                (!isAvailable || isChecking || isSubmitting) ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 shadow-md'
+                (!isAvailable || isChecking || isSubmitting || capacityWarning) ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 shadow-md'
               }`}
             >
               {isSubmitting ? "Submitting..." : "Reserve Venue"}

@@ -74,16 +74,20 @@ const ReservationList = ({
                   ? booking_detail.booking_status
                   : booking_detail.date_status,
                 customer_data: booking_detail.customer,
-                date: new Date(booking_detail.actual_to_date),
+                date: new Date(booking_detail.event_date || booking_detail.actual_to_date),
                 totalPrice: booking_detail.total_agreement_amount,
                 advanceAmount: booking_detail.amount_received,
                 balanceAmount: booking_detail.pending_amount,
-                itemName: booking_detail.rental_items[0]?.item_name,
+                itemName: booking_detail.venue || booking_detail.rental_items[0]?.item_name,
+                hotelProperty: booking_detail.hotel_property,
+                eventType: booking_detail.event_type,
+                timeSlot: booking_detail.time_slot,
                 rentalItems,
                 sales_invoices: booking_detail.sales_invoices || [],
                 securityDocumentStatus: booking_detail.security_document_status || "",
                 bookingEntryStatus:
                   bookingStatusMap.get(booking_detail.booking_entry) || "Unknown",
+                isVenueReservation: !!booking_detail.venue
               };
             })
             .filter(
@@ -188,45 +192,39 @@ const ReservationList = ({
 
       <div className="flex items-center justify-between px-4 mb-4">
         <div className="flex gap-2">
-          <button 
-            onClick={() => setIsNewModalOpen(true)}
-            className="flex items-center justify-center text-white bg-primary px-4 py-2 text-sm rounded-md gap-2 font-semibold transition-colors duration-300 hover:bg-primary/90 shadow-sm"
-          >
-            <IoMdAdd className="w-4 h-4" />
-            New Reservation
-          </button>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Reservations</h1>
         </div>
 
         {!isLoading && (
-          <div className="relative inline-block text-left">
+          <div className="relative inline-block text-left z-20">
             <button
-              className="flex items-center justify-center text-black border border-gray-500 px-3 py-1.5 text-sm rounded-md gap-2 transition-colors duration-300 hover:bg-gray-50"
+              className="flex items-center justify-center bg-white text-slate-700 font-bold border border-slate-200 px-4 py-2.5 text-sm rounded-xl gap-2 transition-all hover:bg-slate-50 hover:shadow-sm"
               onClick={toggleSortDropdown}
             >
-              <BsArrowDownUp />
-              Sort by Modified Date
+              <BsArrowDownUp className="text-slate-400" />
+              Sort by Date
               <IoIosArrowDown
-                className={`transition-transform ${isSortDropdownOpen ? "rotate-180" : ""
+                className={`text-slate-400 transition-transform ${isSortDropdownOpen ? "rotate-180" : ""
                   }`}
               />
             </button>
 
             {isSortDropdownOpen && (
-              <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                <div className="py-1 text-sm text-gray-700">
+              <div className="absolute right-0 mt-2 w-48 rounded-xl shadow-lg shadow-slate-200/50 bg-white ring-1 ring-black ring-opacity-5 overflow-hidden">
+                <div className="py-1">
                   <button
-                    className={`block px-4 py-2 w-full text-left ${sortOrder === "newest"
-                        ? "bg-[#E53E3E]"
-                        : "hover:bg-[#E53E3E]"
+                    className={`block px-4 py-2.5 w-full text-left text-sm font-semibold transition-colors ${sortOrder === "newest"
+                        ? "bg-slate-50 text-primary"
+                        : "text-slate-600 hover:bg-slate-50"
                       }`}
                     onClick={() => handleSortChange("newest")}
                   >
                     Newest First
                   </button>
                   <button
-                    className={`block px-4 py-2 w-full text-left ${sortOrder === "oldest"
-                        ? "bg-[#E53E3E]"
-                        : "hover:bg-[#E53E3E]"
+                    className={`block px-4 py-2.5 w-full text-left text-sm font-semibold transition-colors ${sortOrder === "oldest"
+                        ? "bg-slate-50 text-primary"
+                        : "text-slate-600 hover:bg-slate-50"
                       }`}
                     onClick={() => handleSortChange("oldest")}
                   >
@@ -239,12 +237,12 @@ const ReservationList = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 scroll-smooth">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 pt-0 scroll-smooth">
         {isLoading ? (
-          <div className="col-span-full flex flex-col justify-center items-center py-10">
-            <div className="w-12 h-12 border-4 border-gray-300 border-t-[#E53E3E] rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600 text-sm font-medium">
-              Loading Booking Entries...
+          <div className="col-span-full flex flex-col justify-center items-center py-20">
+            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            <p className="mt-4 text-slate-500 text-sm font-bold">
+              Loading Reservations...
             </p>
           </div>
         ) : paginatedData.length > 0 ? (
@@ -254,16 +252,18 @@ const ReservationList = ({
               id={data.id}
               status={data.status}
               customer={data.customer_data}
-              date={dayjs(data.date).format("DD/MM/YYYY hh:mm A")}
+              date={data.isVenueReservation 
+                ? `${dayjs(data.date).format("DD/MM/YYYY")} | ${data.timeSlot}`
+                : dayjs(data.date).format("DD/MM/YYYY hh:mm A")}
               totalPrice={data.totalPrice}
               advanceAmount={data.advanceAmount}
               balanceAmount={data.balanceAmount}
-              itemName={data.itemName}
+              itemName={data.isVenueReservation ? `${data.itemName} - ${data.eventType}` : data.itemName}
               rentalItems={data.rentalItems}
               bookingEntryStatus={data.bookingEntryStatus}
-              // ✅ securityDocumentStatus pass ചെയ്യുന്നു
               securityDocumentStatus={data.securityDocumentStatus}
               isRentalBooking={data.isRentalBooking}
+              isVenueReservation={data.isVenueReservation}
               addToast={addToast}
               toDate={toDate}
               formatDate={formatDate}

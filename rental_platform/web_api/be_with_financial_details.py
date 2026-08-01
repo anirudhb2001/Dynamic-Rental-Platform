@@ -37,6 +37,11 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
             be.actual_to_date,
             be.status AS booking_status,
             be.return_status AS return_status,
+            be.event_date,
+            be.venue,
+            be.hotel_property,
+            be.time_slot,
+            be.event_type,
             si.name AS sales_invoice,
             si.posting_date AS invoice_date,
             si.grand_total AS invoice_amount,
@@ -141,6 +146,19 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
                     date_status = "Upcoming"
                 elif today > actual_to_date:
                     date_status = "Overdue"
+            elif row.get("event_date"):
+                # Handle venue reservation dates
+                event_date = row.get("event_date")
+                if isinstance(event_date, datetime):
+                    event_date = event_date.date()
+                if event_date == today:
+                    date_status = "Event Today"
+                elif event_date == tomorrow:
+                    date_status = "Event Tomorrow"
+                elif today < event_date:
+                    date_status = "Upcoming"
+                elif today > event_date:
+                    date_status = "Completed"
             elif not rental_from_date:
                 date_status = "No Rental From Date"
             elif not actual_to_date:
@@ -162,6 +180,11 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
                 'rental_from_date': rental_from_date,
                 'rental_to_date': row['rental_to_date'],
                 'actual_to_date': row['actual_to_date'],
+                'event_date': row.get('event_date'),
+                'venue': row.get('venue'),
+                'hotel_property': row.get('hotel_property'),
+                'time_slot': row.get('time_slot'),
+                'event_type': row.get('event_type'),
                 'booking_status': row['booking_status'],
                 'return_status': row['return_status'],
                 'date_status': date_status,
@@ -216,4 +239,155 @@ def get_booking_entry_status():
 
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Fetch Booking Entry Status Error")
+        return {"error": f"An error occurred: {str(e)}"}
+
+@frappe.whitelist(allow_guest=True)
+def get_operational_dashboard_summary(hotel_property=None):
+    try:
+        today = datetime.now().date()
+        
+        # 1. Fetch relevant booking entries
+        conditions = ["be.status NOT IN ('Cancelled')"]
+        params = {}
+        
+        if hotel_property and hotel_property != "All Properties":
+            conditions.append("be.hotel_property = %(hotel_property)s")
+            params['hotel_property'] = hotel_property
+            
+        where_clause = " AND ".join(conditions)
+        
+        # We need custom_booking_entry on Sales Invoice. 
+        # But for performance and since some bookings might not have invoices yet, 
+        # we'll fetch bookings and invoices separately or with a LEFT JOIN.
+        
+        be_query = f"""
+            SELECT
+                be.name AS booking_entry,
+                be.customer,
+                be.event_date,
+                be.time_slot,
+                be.venue,
+                be.hotel_property,
+                be.event_type,
+                be.guest_count,
+                be.status AS booking_status
+            FROM
+                `tabBooking Entry` be
+            WHERE
+                {where_clause}
+            ORDER BY
+                be.event_date ASC, be.creation ASC
+        """
+        all_bookings = frappe.db.sql(be_query, params, as_dict=True)
+        
+        today_events = []
+        upcoming_reservations = []
+        
+        for b in all_bookings:
+            event_date = b.get("event_date")
+            if isinstance(event_date, datetime):
+                event_date = event_date.date()
+                
+            b["date"] = event_date
+            
+            if event_date == today:
+                today_events.append(b)
+            elif event_date and event_date > today:
+                upcoming_reservations.append(b)
+                
+        # Limit upcoming reservations to next 10 for dashboard
+        upcoming_reservations = upcoming_reservations[:10]
+        
+        # 2. Venue Availability
+        venue_conditions = {"is_sales_item": 0, "hotel_property": ["!=", ""]} # Assuming venues are non-sales or just have a hotel_property
+        if hotel_property and hotel_property != "All Properties":
+            venue_conditions["hotel_property"] = hotel_property
+            
+        # Get custom fields if they exist, otherwise fallback
+        has_venue_status = frappe.db.has_column("Item", "venue_status")
+        fields = ["name as venue_name", "hotel_property"]
+        if has_venue_status:
+            fields.append("venue_status")
+            
+        venues = frappe.get_all("Item", filters=venue_conditions, fields=fields)
+        
+        venue_availability = []
+        total_bookable_venues = 0
+        available_venues_count = 0
+        
+        today_booked_venues = [b.venue for b in today_events if b.venue]
+        
+        for v in venues:
+            status = v.get("venue_status") or "Available"
+            
+            if status in ["Available", ""]:
+                total_bookable_venues += 1
+                
+                if v.venue_name in today_booked_venues:
+                    current_status = "BOOKED"
+                else:
+                    current_status = "AVAILABLE"
+                    available_venues_count += 1
+            else:
+                # Maintenance, Blocked, Inactive
+                current_status = status.upper()
+                
+            venue_availability.append({
+                "venue": v.venue_name,
+                "property": v.hotel_property,
+                "status": current_status
+            })
+            
+        # 3. Payment Overview
+        si_query = f"""
+            SELECT
+                SUM(si.grand_total) as total_booking_value,
+                SUM(si.outstanding_amount) as outstanding_amount
+            FROM
+                `tabSales Invoice` si
+            INNER JOIN
+                `tabBooking Entry` be ON si.custom_booking_entry = be.name
+            WHERE
+                {where_clause} AND si.docstatus = 1
+        """
+        si_totals = frappe.db.sql(si_query, params, as_dict=True)[0]
+        
+        total_booking_value = si_totals.get("total_booking_value") or 0.0
+        outstanding_amount = si_totals.get("outstanding_amount") or 0.0
+        advance_received = total_booking_value - outstanding_amount
+        
+        pending_payments_count = frappe.db.sql(f"""
+            SELECT COUNT(DISTINCT be.name)
+            FROM `tabBooking Entry` be
+            INNER JOIN `tabSales Invoice` si ON si.custom_booking_entry = be.name
+            WHERE {where_clause} AND si.docstatus = 1 AND si.outstanding_amount > 0
+        """, params)[0][0]
+        
+        # Get total time slots available
+        time_slot_count = frappe.db.count("Time Slot") or 1
+        total_bookable_time_slots = total_bookable_venues * time_slot_count
+        booked_time_slots = len(today_events)
+        
+        return {
+            "kpis": {
+                "today_events": len(today_events),
+                "upcoming_events": len(upcoming_reservations),
+                "available_venues": available_venues_count,
+                "total_venues": total_bookable_venues,
+                "total_bookable_time_slots": total_bookable_time_slots,
+                "booked_time_slots": booked_time_slots,
+                "pending_payments": pending_payments_count,
+                "outstanding_amount": outstanding_amount
+            },
+            "today_events": today_events,
+            "upcoming_reservations": upcoming_reservations,
+            "venue_availability": venue_availability,
+            "payment_summary": {
+                "total_booking_value": total_booking_value,
+                "advance_received": advance_received,
+                "outstanding_amount": outstanding_amount
+            }
+        }
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Fetch Operational Dashboard Summary Error")
         return {"error": f"An error occurred: {str(e)}"}

@@ -159,6 +159,25 @@ export const getBeWithFinancialDetails = async () => {
   }
 };
 
+export const getOperationalDashboardSummary = async (hotelProperty = null) => {
+  try {
+    const params = {};
+    if (hotelProperty && hotelProperty !== "All Properties") {
+      params.hotel_property = hotelProperty;
+    }
+    const response = await axios.get(
+      `${VITE_PUBLIC_FINANCIAL_BOOKING_DATA}.get_operational_dashboard_summary`,
+      { params }
+    );
+    return response.data.message;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message ||
+      "Failed to fetch operational dashboard summary"
+    );
+  }
+};
+
 export const getBookingEntryStatus = async () => {
   try {
     const response = await axios.get(
@@ -246,6 +265,16 @@ export const getCustomerLists = async () => {
       error.response?.data?.message ||
       "Failed to fetch customer list from server"
     );
+  }
+};
+
+export const searchCustomers = async (searchTerm) => {
+  try {
+    const response = await axios.get(`/api/resource/Customer?fields=["name","customer_name"]&filters=[["customer_name","like","%${searchTerm}%"]]&limit_page_length=50`);
+    return response.data.data;
+  } catch (error) {
+    console.error("Error searching customers:", error);
+    return [];
   }
 };
 
@@ -858,10 +887,36 @@ export const estimateCartTaxes = async (quotationName) => {
   }
 };
 
-export const getVenues = async () => {
+export const getHotelProperties = async () => {
   try {
-    const response = await axios.get('/api/resource/Item?filters=[["is_venue","=",1]]&limit_page_length=1000');
+    const response = await axios.get('/api/resource/Hotel Property?fields=["*"]&limit_page_length=1000');
     return response.data.data;
+  } catch (error) {
+    console.error("Error fetching hotel properties:", error);
+    throw error;
+  }
+};
+
+export const getSeatingTypes = async () => {
+  try {
+    const response = await axios.get('/api/resource/Seating Type?limit_page_length=1000');
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching seating types:", error);
+    throw error;
+  }
+};
+
+export const getVenues = async (hotelProperty = null) => {
+  try {
+    const params = {};
+    if (hotelProperty) params.hotel_property = hotelProperty;
+    
+    const response = await axios.get(
+      "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.get_venues",
+      { params }
+    );
+    return response.data.message;
   } catch (error) {
     console.error("Error fetching venues:", error);
     throw error;
@@ -892,7 +947,12 @@ export const createVenueReservation = async (payload) => {
   try {
     const response = await axios.post(
       "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.create_venue_reservation",
-      payload
+      payload,
+      {
+        headers: {
+          "X-Frappe-CSRF-Token": window.csrf_token || ""
+        }
+      }
     );
     return response.data.message;
   } catch (error) {
@@ -918,7 +978,12 @@ export const extendVenueReservation = async (payload) => {
   try {
     const response = await axios.post(
       "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.extend_venue_reservation",
-      payload
+      payload,
+      {
+        headers: {
+          "X-Frappe-CSRF-Token": window.csrf_token || ""
+        }
+      }
     );
     return response.data.message;
   } catch (error) {
@@ -930,10 +995,31 @@ export const createConsolidatedSalesInvoice = async (booking_name) => {
   try {
     const response = await axios.post(
       "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.create_consolidated_sales_invoice",
-      { booking_name }
+      { booking_name },
+      {
+        headers: {
+          "X-Frappe-CSRF-Token": window.csrf_token || ""
+        }
+      }
     );
     return response.data.message;
   } catch (error) {
     throw error.response?.data?.message || error;
+  }
+};
+
+export const getAllVenueReservations = async () => {
+  try {
+    const fields = JSON.stringify([
+      "name", "customer", "venue", "hotel_property", 
+      "event_date", "time_slot", "event_type", "status", "customer_name"
+    ]);
+    const response = await axios.get(
+      `/api/resource/Booking Entry?fields=${fields}&limit_page_length=1000`
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching all venue reservations:", error);
+    return [];
   }
 };

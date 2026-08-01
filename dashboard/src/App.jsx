@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { FrappeProvider } from "frappe-react-sdk";
-import SideNav from "./component/Sidenav/SideNav";
+import SideNav from "./component/Sidenav/SideNav.jsx";
 import VenueList from "./component/VenueList/VenueList";
 import ReservationList from "./component/ReservationList.jsx";
-import ReportsDashboard from "./component/ReportsDashboard/ReportsDashboard.jsx";
+import OperationalDashboard from "./component/OperationalDashboard/OperationalDashboard.jsx";
 import AvailabilityCalendar from "./component/AvailabilityCalendar/AvailabilityCalendar.jsx";
+import EventTypeList from "./component/EventTypeList/EventTypeList.jsx";
 import Header from "./component/Header/Header";
+import ReservationModal from "./component/AvailabilityCalendar/ReservationModal";
 import VenueBookingCart from "./component/VenueBookingCart/VenueBookingCart";
 import Toast from "./component/ToastAlerts/Toast.jsx";
 import dayjs from "dayjs";
@@ -41,6 +43,8 @@ function App() {
   const [cartItems, setCartItems] = useState([]);
   const [eventDate, setEventDate] = useState(null);
   const [timeSlot, setTimeSlot] = useState(null);
+  const [selectedHotelProperty, setSelectedHotelProperty] = useState("All Properties");
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   
   // Aliases for backward compatibility with existing code
   const pickupDate = eventDate;
@@ -754,203 +758,235 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className="App h-screen overflow-hidden font-barlow bg-slate-50 text-slate-800">
       <FrappeProvider>
-        <div className="App grid gap-2 grid-rows-[auto,1fr] min-h-screen font-barlow">
-          <div className="w-full mb-2">
-            <Header
-              onButtonClick={toggleComponentSidenav}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              handleKeyDown={handleKeyDown}
-              handleSearchClick={handleSearchClick}
-              handleSearchChange={handleSearchChange}
-              userImage={userImage}
-              user={user}
-              companyName={companyName}
-              logo={logo}
-              portalMode={portalMode}
-              isAuthenticated={isAuthenticated}
-              handleCustomerLogout={handleCustomerLogout}
-              customerDetails={customerDetails}
+        <div className="flex h-full w-full relative">
+          {/* Mobile Overlay */}
+          {isComponentSidenavVisible && (
+            <div 
+              className="fixed inset-0 bg-slate-900/50 z-30 md:hidden backdrop-blur-sm"
+              onClick={() => setIsComponentSidenavVisible(false)}
             />
-          </div>
+          )}
 
-          <div className="grid w-full relative grid-cols-12 gap-2">
-            <div className="col-span-12 sm:col-span-3">
-              {isComponentSidenavVisible && (
-                <SideNav
-                  companyName={companyName}
-                  onTabChange={handleTabChange}
-                  selectedCategory={selectedCategory}
-                  setSelectedCategory={setSelectedCategory}
-                  selectedBrands={selectedBrands}
-                  setSelectedBrands={setSelectedBrands}
-                  onDateChange={handleDateChange}
-                  selectedCustomer={selectedCustomer}
-                  setSelectedCustomer={setSelectedCustomer}
-                  pickupDate={pickupDate}
-                  returnDate={returnDate}
-                  actualReturnDate={actual_returnDate}
-                  onClearFilter={handleClearFilter}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  isDateFieldDisabled={isDateFieldDisabled}
-                  isDropdownOpen={isDropdownOpen}
-                  setIsDropdownOpen={setIsDropdownOpen}
-                  forceAvailable={forceAvailable}
-                  filterCustomer={filterCustomer}
-                  setFilterCustomer={setFilterCustomer}
-                  allBookingData={allBookingData}
-                  setFinancialData={setFinancialData}
-                  setFilterWarehouse={setFilterWarehouse}
-                  filterWarehouse={filterWarehouse}
-                  setCurrentPageBooking={setCurrentPageBooking}
-                  setSelectedWarehouse={setSelectedWarehouse}
-                  selectedWarehouse={selectedWarehouse}
-                  setCurrentPage={setCurrentPage}
-                  extendpickupDate={extendpickupDate}
-                  extendreturnDate={extendreturnDate}
-                  setExtendPickupDate={setExtendPickupDate}
-                  setExtendReturnDate={setExtendReturnDate}
-                  isLoading={isLoading}
-                  addToast={addToast}
-                  quotationNames={quotationNames}
-                  setIsUserWarehouse={setIsUserWarehouse}
-                  isUserWarehouse={isUserWarehouse}
-                  setMainCartItems={setMainCartItems}
-                  setIsDateDropdownOpen={setIsDateDropdownOpen}
-                  filterDateStatus={filterDateStatus}
-                  portalMode={portalMode}
-                  isDateDropdownOpen={isDateDropdownOpen}
-                  setFilterDateStatus={setFilterDateStatus}
-                  selectedSalesInvoiceStatus={selectedSalesInvoiceStatus}
-                  setSelectedSalesInvoiceStatus={setSelectedSalesInvoiceStatus}
-                  selectedItemAvailStatus={selectedItemAvailStatus}
-                  setSelectedItemAvailStatus={setSelectedItemAvailStatus}
-                  setIsItemStatusDropOpen={setIsItemStatusDropOpen}
-                  isItemStatusDropOpen={isItemStatusDropOpen}
-                  branding={brandingData}
-                />
-              )}
+          {/* Sidebar */}
+          <div className={`
+            fixed md:relative top-0 left-0 h-full bg-white border-r border-slate-200 z-40
+            transform transition-transform duration-300 ease-in-out flex-shrink-0
+            ${isComponentSidenavVisible ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            ${!isComponentSidenavVisible ? 'md:hidden' : ''}
+          `}>
+            <SideNav
+              companyName={companyName}
+              onTabChange={(tab) => {
+                handleTabChange(tab);
+                if (window.innerWidth < 768) setIsComponentSidenavVisible(false);
+              }}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                selectedBrands={selectedBrands}
+                setSelectedBrands={setSelectedBrands}
+                onDateChange={handleDateChange}
+                selectedCustomer={selectedCustomer}
+                setSelectedCustomer={setSelectedCustomer}
+                pickupDate={pickupDate}
+                returnDate={returnDate}
+                actualReturnDate={actual_returnDate}
+                onClearFilter={handleClearFilter}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                isDateFieldDisabled={isDateFieldDisabled}
+                isDropdownOpen={isDropdownOpen}
+                setIsDropdownOpen={setIsDropdownOpen}
+                forceAvailable={forceAvailable}
+                filterCustomer={filterCustomer}
+                setFilterCustomer={setFilterCustomer}
+                allBookingData={allBookingData}
+                setFinancialData={setFinancialData}
+                setFilterWarehouse={setFilterWarehouse}
+                filterWarehouse={filterWarehouse}
+                setCurrentPageBooking={setCurrentPageBooking}
+                setSelectedWarehouse={setSelectedWarehouse}
+                selectedWarehouse={selectedWarehouse}
+                setCurrentPage={setCurrentPage}
+                extendpickupDate={extendpickupDate}
+                extendreturnDate={extendreturnDate}
+                setExtendPickupDate={setExtendPickupDate}
+                setExtendReturnDate={setExtendReturnDate}
+                isLoading={isLoading}
+                addToast={addToast}
+                quotationNames={quotationNames}
+                setIsUserWarehouse={setIsUserWarehouse}
+                isUserWarehouse={isUserWarehouse}
+                setMainCartItems={setMainCartItems}
+                setIsDateDropdownOpen={setIsDateDropdownOpen}
+                filterDateStatus={filterDateStatus}
+                portalMode={portalMode}
+                isDateDropdownOpen={isDateDropdownOpen}
+                setFilterDateStatus={setFilterDateStatus}
+                selectedSalesInvoiceStatus={selectedSalesInvoiceStatus}
+                setSelectedSalesInvoiceStatus={setSelectedSalesInvoiceStatus}
+                selectedItemAvailStatus={selectedItemAvailStatus}
+                setSelectedItemAvailStatus={setSelectedItemAvailStatus}
+                setIsItemStatusDropOpen={setIsItemStatusDropOpen}
+                isItemStatusDropOpen={isItemStatusDropOpen}
+                branding={brandingData}
+              />
             </div>
 
-            <div
-              className={`${activeComponent === "venues"
-                  ? "col-span-12 sm:col-span-6"
-                  : "col-span-12 sm:col-span-9"
-                }`}
-            >
-              {activeComponent === "dashboard" || activeComponent === "reports" ? (
-                <ReportsDashboard 
-                  allBookingData={allBookingData} 
-                  financialData={financialData} 
-                />
-              ) : activeComponent === "calendar" ? (
-                <AvailabilityCalendar 
-                  addToast={addToast}
-                  allBookingData={allBookingData} 
-                  refreshBookings={fetchData}
-                />
-              ) : activeComponent === "venues" ? (
-                <VenueList
-                  stockQuantities={stockQuantities}
-                  setStockQuantities={setStockQuantities}
-                  setMainCartItems={setMainCartItems}
-                  mainCartItems={mainCartItems}
-                  onContinueToCheckout={handleContinueToCheckout}
-                  cartItems={cartItems}
-                  setCartItems={setCartItems}
-                  pickupDate={eventDate}
-                  returnDate={timeSlot}
-                  actual_returnDate={timeSlot}
-                  selectedCustomer={selectedCustomer}
-                  quantities={quantities}
-                  setQuantities={setQuantities}
-                  createQuotationHandler={createQuotationHandler}
-                  setIsCartOpen={setIsCartOpen}
-                  isCartOpen={isCartOpen}
-                  addToast={addToast}
-                  quotationNames={quotationNames}
-                  currentPage={currentPage}
-                  setCurrentPage={setCurrentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  pageNumbers={pageNumbers}
-                  formatDate={formatDate}
-                  selectedPriceList={selectedPriceList}
-                  setSelectedPriceList={setSelectedPriceList}
-                  loading={loading}
-                  error={error}
-                  rentalAssets={rentalAssets}
-                  globalKpis={globalKpis}
-                  branding={brandingData}
-                  forceAvailable={forceAvailable}
-                  portalMode={portalMode}
-                  findMatchingQuantity={findMatchingQuantity}
-                  setDefaultPriceList={setDefaultPriceList}
-                  itemsState={itemsState}
-                  setItemsState={setItemsState}
-                  fetchData={fetchData}
-                  isSortActive={isSortActive}
-                  setIsSortActive={setIsSortActive}
-                  sortOption={sortOption}
-                  setSortOption={setSortOption}
-                  customerDetails={customerDetails}
-                />
-              ) : activeComponent === "reservations" ? (
-                <ReservationList
-                  addToast={addToast}
-                  quotationNames={quotationNames}
-                  onRedirectToRentalAssetList={handleRedirectToRentalAssetList}
-                  financialData={financialData}
-                  setFinancialData={setFinancialData}
-                  setAllBookingData={setAllBookingData}
-                  allBookingData={allBookingData}
-                  setFilterCustomer={setFilterCustomer}
-                  setIsDropdownOpen={setIsDropdownOpen}
-                  currentPage={currentPageBooking}
-                  setCurrentPage={setCurrentPageBooking}
-                  extendpickupDate={extendpickupDate}
-                  extendreturnDate={extendreturnDate}
-                  isLoading={isLoading}
-                  setIsLoading={setIsLoading}
-                  formatDate={formatDate}
-                  fetchData={fetchData}
-                  customerDetails={customerDetails}
-                />
-              ) : (
-                <div className="w-full flex flex-col h-[calc(100vh-6rem)] overflow-y-auto rounded-3xl bg-white/45 p-5 backdrop-blur-xl">
-                  <h2 className="text-2xl font-black mb-4">Event Types</h2>
-                  <p className="text-slate-500">Event types management coming soon.</p>
+          {/* Main Layout Area */}
+          <div className="flex-1 flex flex-col h-full overflow-hidden w-full relative">
+            {/* Header */}
+            <div className="w-full flex-shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm relative">
+              <Header
+                onButtonClick={toggleComponentSidenav}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                handleKeyDown={handleKeyDown}
+                handleSearchClick={handleSearchClick}
+                handleSearchChange={handleSearchChange}
+                userImage={userImage}
+                user={user}
+                companyName={companyName}
+                logo={logo}
+                portalMode={portalMode}
+                isAuthenticated={isAuthenticated}
+                handleCustomerLogout={handleCustomerLogout}
+                customerDetails={customerDetails}
+                onNewReservationClick={() => setIsReservationModalOpen(true)}
+              />
+            </div>
+
+            {/* Scrollable Main Content Wrapper */}
+            <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 w-full relative">
+              <div className={`w-full ${activeComponent === "venues" ? "flex gap-4 items-start relative" : ""}`}>
+                {/* Active Component */}
+                <div className={`w-full ${activeComponent === "venues" ? "flex-1 w-full relative" : "w-full h-full"}`}>
+                  {activeComponent === "dashboard" || activeComponent === "reports" ? (
+                    <OperationalDashboard 
+                      selectedHotelProperty={selectedHotelProperty}
+                      setSelectedHotelProperty={setSelectedHotelProperty}
+                      onNavigate={(tab) => handleTabChange(tab)}
+                      onNewReservationClick={() => setIsReservationModalOpen(true)}
+                    />
+                  ) : activeComponent === "calendar" ? (
+                    <AvailabilityCalendar 
+                      addToast={addToast}
+                      allBookingData={allBookingData} 
+                      refreshBookings={fetchData}
+                    />
+                  ) : activeComponent === "venues" ? (
+                    <VenueList
+                      stockQuantities={stockQuantities}
+                      setStockQuantities={setStockQuantities}
+                      setMainCartItems={setMainCartItems}
+                      mainCartItems={mainCartItems}
+                      onContinueToCheckout={handleContinueToCheckout}
+                      cartItems={cartItems}
+                      setCartItems={setCartItems}
+                      pickupDate={eventDate}
+                      returnDate={timeSlot}
+                      actual_returnDate={timeSlot}
+                      selectedCustomer={selectedCustomer}
+                      quantities={quantities}
+                      setQuantities={setQuantities}
+                      createQuotationHandler={createQuotationHandler}
+                      setIsCartOpen={setIsCartOpen}
+                      isCartOpen={isCartOpen}
+                      addToast={addToast}
+                      quotationNames={quotationNames}
+                      currentPage={currentPage}
+                      setCurrentPage={setCurrentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      pageNumbers={pageNumbers}
+                      formatDate={formatDate}
+                      selectedPriceList={selectedPriceList}
+                      setSelectedPriceList={setSelectedPriceList}
+                      loading={loading}
+                      error={error}
+                      rentalAssets={rentalAssets}
+                      globalKpis={globalKpis}
+                      branding={brandingData}
+                      forceAvailable={forceAvailable}
+                      portalMode={portalMode}
+                      findMatchingQuantity={findMatchingQuantity}
+                      setDefaultPriceList={setDefaultPriceList}
+                      itemsState={itemsState}
+                      setItemsState={setItemsState}
+                      fetchData={fetchData}
+                      isSortActive={isSortActive}
+                      setIsSortActive={setIsSortActive}
+                      sortOption={sortOption}
+                      setSortOption={setSortOption}
+                      customerDetails={customerDetails}
+                    />
+                  ) : activeComponent === "reservations" ? (
+                    <ReservationList
+                      addToast={addToast}
+                      quotationNames={quotationNames}
+                      onRedirectToRentalAssetList={handleRedirectToRentalAssetList}
+                      financialData={financialData}
+                      setFinancialData={setFinancialData}
+                      setAllBookingData={setAllBookingData}
+                      allBookingData={allBookingData}
+                      setFilterCustomer={setFilterCustomer}
+                      setIsDropdownOpen={setIsDropdownOpen}
+                      currentPage={currentPageBooking}
+                      setCurrentPage={setCurrentPageBooking}
+                      extendpickupDate={extendpickupDate}
+                      extendreturnDate={extendreturnDate}
+                      isLoading={isLoading}
+                      setIsLoading={setIsLoading}
+                      formatDate={formatDate}
+                      fetchData={fetchData}
+                      customerDetails={customerDetails}
+                    />
+                  ) : activeComponent === "eventTypes" ? (
+                    <EventTypeList />
+                  ) : (
+                    <div className="w-full flex flex-col h-[calc(100vh-6rem)] overflow-y-auto rounded-3xl bg-white/45 p-5 backdrop-blur-xl">
+                      <h2 className="text-2xl font-black mb-4">Under Construction</h2>
+                      <p className="text-slate-500">This section is coming soon.</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Rental Cart */}
-            {activeComponent === "venues" && (
-              <div className="col-span-12 sm:col-span-3">
-                <VenueBookingCart
-                  mainCartItems={mainCartItems}
-                  setMainCartItems={setMainCartItems}
-                  selectedCustomer={selectedCustomer}
-                  quotationNames={quotationNames}
-                  toasts={toasts}
-                  addToast={addToast}
-                  removeToast={removeToast}
-                  totalAmountCart={totalAmountCart}
-                  settotalAmountCart={settotalAmountCart}
-                  financialData={financialData}
-                  exbookingEntryName={bookingEntryName}
-                  salesAvailable={salesAvailable}
-                  setQuotationNames={setQuotationNames}
-                  portalMode={portalMode}
-                  fetchData={fetchData}
-                  customerDetails={customerDetails}
-                />
+                {/* Venue Booking Cart Sidebar for Venues Route */}
+                {activeComponent === "venues" && (
+                  <div className="w-80 flex-shrink-0 relative hidden lg:block">
+                    <VenueBookingCart
+                      mainCartItems={mainCartItems}
+                      setMainCartItems={setMainCartItems}
+                      selectedCustomer={selectedCustomer}
+                      quotationNames={quotationNames}
+                      toasts={toasts}
+                      addToast={addToast}
+                      removeToast={removeToast}
+                      totalAmountCart={totalAmountCart}
+                      settotalAmountCart={settotalAmountCart}
+                      financialData={financialData}
+                      exbookingEntryName={bookingEntryName}
+                      salesAvailable={salesAvailable}
+                      setQuotationNames={setQuotationNames}
+                      portalMode={portalMode}
+                      fetchData={fetchData}
+                      customerDetails={customerDetails}
+                    />
+                  </div>
+                )}
               </div>
-            )}
+            </main>
           </div>
+          <ReservationModal
+            isOpen={isReservationModalOpen}
+            onClose={() => setIsReservationModalOpen(false)}
+            addToast={addToast}
+            onReservationCreated={() => {
+              fetchData(searchQuery);
+              setIsReservationModalOpen(false);
+            }}
+          />
           <Toast messages={toasts} removeToast={removeToast} />
         </div>
       </FrappeProvider>

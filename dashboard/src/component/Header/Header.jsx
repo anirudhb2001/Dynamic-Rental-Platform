@@ -24,6 +24,7 @@ function Header({
   isAuthenticated,
   handleCustomerLogout,
   customerDetails,
+  onNewReservationClick,
 }) {
   const [isNavbarVisible, setIsNavbarVisible] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -104,10 +105,17 @@ function Header({
 
         {/* Right: Actions and User */}
         <div className="flex items-center justify-end gap-6 w-1/4">
-          {/* <button className="hidden lg:flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors text-sm font-medium">
-            <CiSearch className="h-5 w-5" />
-            <span>Search</span>
-          </button> */}
+          {portalMode !== "customer" && (
+            <button
+              onClick={onNewReservationClick}
+              className="hidden md:flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="whitespace-nowrap">New Reservation</span>
+            </button>
+          )}
           
           {(portalMode !== "customer" || (portalMode === "customer" && isAuthenticated)) && (
             <NotificationDropdown 

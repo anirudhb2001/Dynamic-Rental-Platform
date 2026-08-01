@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { getTimeSlots, extendVenueReservation, checkVenueAvailability } from "../../services/api";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 
 const ReservationExtensionModal = ({ isOpen, onClose, originalBooking, addToast, onExtensionCreated }) => {
   const [timeSlots, setTimeSlots] = useState([]);
@@ -117,7 +121,30 @@ const ReservationExtensionModal = ({ isOpen, onClose, originalBooking, addToast,
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Extension Date *</label>
-              <input type="date" name="extension_date" value={formData.extension_date} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none" />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  format="DD/MM/YYYY"
+                  value={formData.extension_date ? dayjs(formData.extension_date) : null}
+                  onChange={(newValue) => {
+                    handleChange({
+                      target: {
+                        name: "extension_date",
+                        value: newValue ? newValue.format("YYYY-MM-DD") : ""
+                      }
+                    });
+                  }}
+                  slotProps={{ 
+                    textField: { 
+                      fullWidth: true,
+                      size: "small",
+                      sx: { 
+                        '& .MuiInputBase-root': { borderRadius: '0.75rem', backgroundColor: '#f8fafc', height: '44px' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' }
+                      }
+                    } 
+                  }}
+                />
+              </LocalizationProvider>
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Extension Time Slot *</label>

@@ -44,7 +44,11 @@ class BookingEntry(Document):
         self.check_availability()
         
     def check_availability(self):
-        if self.guest_count and self.venue_capacity and int(self.guest_count) > int(self.venue_capacity):
+        if self.venue and self.seating_type and self.guest_count:
+            capacity = frappe.db.get_value("Venue Seating Capacity", {"parent": self.venue, "seating_type": self.seating_type}, "capacity")
+            if capacity and int(self.guest_count) > int(capacity):
+                frappe.throw(_("Guest count {0} exceeds the {1} capacity of {2} for {3}.").format(self.guest_count, self.seating_type, capacity, self.venue))
+        elif self.guest_count and self.venue_capacity and int(self.guest_count) > int(self.venue_capacity):
             frappe.throw(_("Guest count ({0}) exceeds venue capacity ({1}).").format(self.guest_count, self.venue_capacity))
 
         if not self.venue or not self.event_date or not self.time_slot:
@@ -94,7 +98,7 @@ def check_venue_availability(venue, event_date, time_slot, exclude_booking_name=
     return {"available": True}
 
 @frappe.whitelist()
-def create_venue_reservation(customer, venue, event_type, event_date, time_slot, guest_count=0, special_instructions=""):
+def create_venue_reservation(customer, venue, event_type, event_date, time_slot, hotel_property=None, seating_type=None, guest_count=0, special_instructions=""):
     # 1. Validation
     if not customer or not venue or not event_date or not time_slot or not event_type:
         frappe.throw(_("Customer, Venue, Event Type, Event Date, and Time Slot are required."))
@@ -127,10 +131,14 @@ def create_venue_reservation(customer, venue, event_type, event_date, time_slot,
         # Create Booking Entry
         be = frappe.new_doc("Booking Entry")
         be.customer = customer
+        if hotel_property:
+            be.hotel_property = hotel_property
         be.venue = venue
         be.event_type = event_type
         be.event_date = event_date
         be.time_slot = time_slot
+        if seating_type:
+            be.seating_type = seating_type
         be.guest_count = guest_count
         be.special_instructions = special_instructions
         be.status = "Reserved"
@@ -198,6 +206,17 @@ def extend_venue_reservation(booking_name, extension_date, time_slot, amount=Non
         frappe.throw(_("Failed to extend reservation: {0}").format(str(e)))
 
 @frappe.whitelist()
+def get_venues(hotel_property=None):
+    filters = {"is_venue": 1}
+    if hotel_property:
+        filters["hotel_property"] = hotel_property
+        
+    venues = frappe.get_all("Item", filters=filters, fields=["name", "item_name", "hotel_property", "venue_size", "venue_size_unit", "venue_description", "venue_image", "venue_status", "venue_capacity"])
+    
+    for v in venues:
+        v["seating_capacities"] = frappe.get_all("Venue Seating Capacity", filters={"parent": v.name}, fields=["seating_type", "capacity"])
+        
+    return venues
 def create_consolidated_sales_invoice(booking_name):
     try:
         be = frappe.get_doc("Booking Entry", booking_name)
