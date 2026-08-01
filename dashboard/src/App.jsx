@@ -850,6 +850,7 @@ function App() {
                 <AvailabilityCalendar 
                   addToast={addToast}
                   allBookingData={allBookingData} 
+                  refreshBookings={fetchData}
                 />
               ) : activeComponent === "venues" ? (
                 <VenueList

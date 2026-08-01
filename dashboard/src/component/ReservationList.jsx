@@ -6,8 +6,9 @@ import {
 } from "../services/api";
 import Pagination from "./Pagination/Pagination.jsx";
 import dayjs from "dayjs";
-import { IoIosArrowDown } from "react-icons/io";
 import { BsArrowDownUp } from "react-icons/bs";
+import { IoIosArrowDown, IoMdAdd } from "react-icons/io";
+import ReservationModal from "./AvailabilityCalendar/ReservationModal";
 
 const ReservationList = ({
   addToast,
@@ -30,6 +31,7 @@ const ReservationList = ({
   const itemsPerPage = 12;
   const [sortOrder, setSortOrder] = useState("newest");
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
   const sortBookingData = useCallback((data, order) => {
     return [...data].sort((a, b) => {
@@ -185,8 +187,14 @@ const ReservationList = ({
     <div>
 
       <div className="flex items-center justify-between px-4 mb-4">
-        <div className="flex">
-          {/* Toggle removed: Defaulting strictly to New Returns (Rental Booking) per workflow requirements. Legacy code preserved but hidden. */}
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setIsNewModalOpen(true)}
+            className="flex items-center justify-center text-white bg-primary px-4 py-2 text-sm rounded-md gap-2 font-semibold transition-colors duration-300 hover:bg-primary/90 shadow-sm"
+          >
+            <IoMdAdd className="w-4 h-4" />
+            New Reservation
+          </button>
         </div>
 
         {!isLoading && (
@@ -288,6 +296,13 @@ const ReservationList = ({
           selectedPriceList={null}
         />
       )}
+
+      <ReservationModal 
+        isOpen={isNewModalOpen} 
+        onClose={() => setIsNewModalOpen(false)} 
+        addToast={addToast}
+        onReservationCreated={fetchData}
+      />
     </div>
   );
 };

@@ -857,3 +857,83 @@ export const estimateCartTaxes = async (quotationName) => {
     throw error.response?.data || error;
   }
 };
+
+export const getVenues = async () => {
+  try {
+    const response = await axios.get('/api/resource/Item?filters=[["is_venue","=",1]]&limit_page_length=1000');
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching venues:", error);
+    throw error;
+  }
+};
+
+export const getEventTypes = async () => {
+  try {
+    const response = await axios.get("/api/resource/Event Type?limit_page_length=1000");
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching event types:", error);
+    throw error;
+  }
+};
+
+export const getTimeSlots = async () => {
+  try {
+    const response = await axios.get("/api/resource/Time Slot?limit_page_length=1000");
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching time slots:", error);
+    throw error;
+  }
+};
+
+export const createVenueReservation = async (payload) => {
+  try {
+    const response = await axios.post(
+      "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.create_venue_reservation",
+      payload
+    );
+    return response.data.message;
+  } catch (error) {
+    throw error.response?.data?.message || error;
+  }
+};
+
+export const checkVenueAvailability = async (venue, event_date, time_slot, exclude_booking_name = null) => {
+  try {
+    const params = { venue, event_date, time_slot };
+    if (exclude_booking_name) params.exclude_booking_name = exclude_booking_name;
+    const response = await axios.get(
+      "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.check_venue_availability",
+      { params }
+    );
+    return response.data.message;
+  } catch (error) {
+    throw error.response?.data?.message || error;
+  }
+};
+
+export const extendVenueReservation = async (payload) => {
+  try {
+    const response = await axios.post(
+      "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.extend_venue_reservation",
+      payload
+    );
+    return response.data.message;
+  } catch (error) {
+    throw error.response?.data?.message || error;
+  }
+};
+
+export const createConsolidatedSalesInvoice = async (booking_name) => {
+  try {
+    const response = await axios.post(
+      "/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.create_consolidated_sales_invoice",
+      { booking_name }
+    );
+    return response.data.message;
+  } catch (error) {
+    throw error.response?.data?.message || error;
+  }
+};
