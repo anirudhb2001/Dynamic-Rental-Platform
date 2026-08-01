@@ -1,681 +1,287 @@
 import React, { useState, useEffect } from "react";
-import "react-datepicker/dist/react-datepicker.css";
-import {
-  VITE_PUBLIC_SALE_INVOICE_LINK,
-  VITE_PUBLIC_BOOKING_ENTRY_LINK,
-  VITE_PUBLIC_PAYMENT_ENTRY_LINK,
-} from "../../../../constants";
+import { getWarehouseList, processReturnBooking, getServiceItem, getBookingEntryItems } from "../../services/api";
 import InventoryItem from "./InventoryItem";
-import AvailabilityStatusModal from "../ConfirmationModal/AvailabilityStatusModal";
-import {
-  getWarehouseList,
-  getServiceItem,
-  rentalReturnBooking,
-  getProductBundleList,
-  createPaymentEntry,
-} from "../../services/api";
 import { IoMdClose } from "react-icons/io";
-import ExtendBookingItem from "./ExtendBookingItem";
 
-function ReturnOrderPopup({
-  show,
+const ReturnOrderPopup = ({
+  booking,
   onClose,
-  rentalItems,
-  id,
-  date,
+  onActionComplete,
   addToast,
-  onRedirectToRentalAssetList,
-  toDate,
-  setToDate,
-  closeReturnModal,
-  isBookingReturned,
-  formatDate,
-  fetchData,
-  initialTab = "return",
-}) {
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const [isExtendModalOpen, setExtendModalOpen] = useState(false);
-  const [serviceItem, setServiceItem] = useState([]);
+}) => {
+  const [items, setItems] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [serviceItems, setServiceItems] = useState([]);
   const [acceptedItems, setAcceptedItems] = useState({});
   const [selectedWarehouses, setSelectedWarehouses] = useState({});
-  const [selectedItems, setSelectedItems] = useState([]);
-  const [remarks, setRemarks] = useState({});
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [itemNames, setItemNames] = useState([]);
-  const [bundleIds, setBundleIds] = useState(new Set());
-
-  const handleOpenExtendModal = () => setExtendModalOpen(true);
-  const handleCloseExtendModal = () => setExtendModalOpen(false);
-
-  useEffect(() => {
-    const fetchBundleList = async () => {
-      try {
-        const data = await getProductBundleList();
-        const ids = new Set(data.message.map((bundle) => bundle.bundle_id));
-        setBundleIds(ids);
-      } catch (error) {
-        console.error("Error fetching product bundle list:", error);
-      }
-    };
-
-    fetchBundleList();
-  }, []);
+  const [itemRemarks, setItemRemarks] = useState({});
+  const [additionalCharges, setAdditionalCharges] = useState([]);
+  
+  const [customerBlackList, setCustomerBlackList] = useState(false);
+  const [customerYellowList, setCustomerYellowList] = useState(false);
+  const [customerRemarks, setCustomerRemarks] = useState("");
+  
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchWarehouses = async () => {
-      try {
-        const response = await getWarehouseList();
-        const formattedDate = response.map((warehouse_data) => ({
-          id: warehouse_data.warehouse_id,
-          warehouse_name: warehouse_data.warehouse,
-        }));
-        setWarehouses(formattedDate);
-      } catch (error) {
-        addToast(error.message || "Failed to fetch warehouses:", "error");
-      }
-    };
-
-    const fetchServiceItem = async () => {
-      try {
-        const data = await getServiceItem();
-        setServiceItem(data);
-      } catch (error) {
-        addToast(error.message || "Failed to fetch service item", "error");
-      }
-    };
-
-    fetchWarehouses();
-    fetchServiceItem();
-  }, []);
-
-  const handleRemarkChange = (itemName, remark) => {
-    setRemarks((prevRemarks) => ({
-      ...prevRemarks,
-      [itemName]: remark,
-    }));
-  };
-
-  const handleInputChange = (index, field, value) => {
-    const updatedItems = [...selectedItems];
-    updatedItems[index][field] = value;
-    setSelectedItems(updatedItems);
-  };
-
-  const addNewRow = () => {
-    setSelectedItems([...selectedItems, { item_code: "", rate: 0 }]);
-  };
-
-  const handleRowSelect = (index) => {
-    let updatedSelectedRows = [...selectedRows];
-    if (updatedSelectedRows.includes(index)) {
-      updatedSelectedRows = updatedSelectedRows.filter((i) => i !== index);
-    } else {
-      updatedSelectedRows.push(index);
+    if (booking) {
+      setLoading(true);
+      fetchDataForPopup();
     }
-    setSelectedRows(updatedSelectedRows);
-  };
+  }, [booking]);
 
-  const handleSelectAll = () => {
-    if (selectedRows.length === selectedItems.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(selectedItems.map((_, index) => index));
+  const fetchDataForPopup = async () => {
+    try {
+      const [warehouseData, serviceData, itemsData] = await Promise.all([
+        getWarehouseList(),
+        getServiceItem(),
+        getBookingEntryItems(booking.name)
+      ]);
+      setWarehouses(warehouseData || []);
+      setServiceItems(serviceData || []);
+      setItems(itemsData?.items || []);
+    } catch (err) {
+      addToast(err.message || "Failed to load return data", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteSelectedRows = () => {
-    const updatedItems = selectedItems.filter(
-      (_, index) => !selectedRows.includes(index)
-    );
-    setSelectedItems(updatedItems);
-    setSelectedRows([]);
-  };
-
-  const getCSRFToken = () => {
-    return window.csrf_token;
-  };
-
-  const handleAccept = (index) => {
-    setAcceptedItems((prev) => {
-      const updatedItems = { ...prev };
-      if (updatedItems[index]) {
-        delete updatedItems[index];
-        setSelectedWarehouses((prev) => {
-          const updatedWarehouses = { ...prev };
-          delete updatedWarehouses[index];
-          return updatedWarehouses;
-        });
-      } else {
-        updatedItems[index] = true;
-        setSelectedWarehouses((prev) => ({
-          ...prev,
-          [index]: "Stores - RAC",
-        }));
-      }
-      return updatedItems;
-    });
+  const handleAcceptToggle = (index) => {
+    setAcceptedItems((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleWarehouseChange = (index, value) => {
-    setSelectedWarehouses((prev) => ({
-      ...prev,
-      [index]: value,
-    }));
+    setSelectedWarehouses((prev) => ({ ...prev, [index]: value }));
   };
 
-  useEffect(() => {
-    const names = rentalItems.map(item => item.item_name);
-    setItemNames(names);
-  }, [rentalItems]);
+  const handleRemarkChange = (index, value) => {
+    setItemRemarks((prev) => ({ ...prev, [index]: value }));
+  };
 
-  useEffect(() => {
-    if (show) {
-      setActiveTab(initialTab);
+  const handleAddCharge = () => {
+    setAdditionalCharges([...additionalCharges, { item_code: "", rate: "" }]);
+  };
+
+  const handleChargeChange = (index, field, value) => {
+    const updated = [...additionalCharges];
+    updated[index][field] = value;
+    setAdditionalCharges(updated);
+  };
+
+  const handleRemoveCharge = (index) => {
+    setAdditionalCharges(additionalCharges.filter((_, i) => i !== index));
+  };
+
+  const getCSRFToken = () => {
+    return typeof window !== "undefined" && window.csrf_token
+      ? window.csrf_token
+      : "";
+  };
+
+  const handleSubmit = async () => {
+    const acceptedCount = Object.values(acceptedItems).filter(Boolean).length;
+    if (acceptedCount === 0 && additionalCharges.length === 0) {
+      addToast("Please accept items to return or add charges.", "error");
+      return;
     }
-  }, [show, initialTab]);
 
+    const itemWarehousesList = [];
+    const formattedItemRemarks = [];
 
-  const handleReturnBooking = async () => {
+    for (let i = 0; i < items.length; i++) {
+      if (acceptedItems[i]) {
+        itemWarehousesList.push({
+          rental_item_id: items[i].rental_item_id,
+          quantity: items[i].stock_quantity,
+          warehouse: selectedWarehouses[i] || "",
+          serial_no: items[i].serial_no || "",
+        });
+
+        if (itemRemarks[i]) {
+          formattedItemRemarks.push({
+            item_name: items[i].item_name,
+            remark: itemRemarks[i]
+          });
+        }
+      }
+    }
+
     try {
-      if (selectedItems.some((item) => !item.item_code || !item.rate)) {
-        addToast(
-          "Please fill out all fields in Additional charges before proceeding.",
-          "error"
-        );
-        return;
-      }
-
-      if (selectedItems.some((item) => item.rate < 0)) {
-        addToast(
-          "Amount cannot be negative. Please enter a valid amount.",
-          "error"
-        );
-        return;
-      }
-
-      if (acceptedItems === false) {
-        addToast("Please choose any item before Returning", "error");
-        return;
-      }
-
-      const bookingEntryId = id;
-      const additionalCharges = selectedItems;
-      const itemWarehouses = Object.entries(selectedWarehouses).map(
-        ([index, warehouse]) => ({
-          rental_item_id: rentalItems[index].item_name,
-          warehouse: warehouse,
-          quantity: rentalItems[index].stock_quantity,
-        })
+      setSubmitting(true);
+      const response = await processReturnBooking(
+        booking.name,
+        additionalCharges.filter(c => c.item_code),
+        itemWarehousesList,
+        customerBlackList,
+        customerYellowList,
+        customerRemarks,
+        formattedItemRemarks,
+        getCSRFToken()
       );
 
-      const itemRemarks = Object.entries(acceptedItems || {}).map(
-        ([index]) => ({
-          item_name: rentalItems?.[index]?.item_name,
-          remark: remarks?.[rentalItems?.[index]?.item_name] || "",
-        })
-      );
-
-      const blackList =
-        document.querySelector("#blacklist-checkbox")?.checked || false;
-      const yellowList =
-        document.querySelector("#yellowlist-checkbox")?.checked || false;
-      const addRemarks =
-        document.querySelector("#remarks-textarea")?.value || "";
-      const csrfToken = getCSRFToken();
-
-      const response = await rentalReturnBooking(
-        bookingEntryId,
-        additionalCharges,
-        itemWarehouses,
-        blackList,
-        yellowList,
-        addRemarks,
-        itemRemarks,
-        csrfToken
-      );
-
-      if (response.error) {
-        addToast(response.error, "error");
+      if (response && response.sales_invoice_name) {
+        addToast(`Return Processed. Opening Invoice ${response.sales_invoice_name}`, "success");
+        // Open the Draft Sales Invoice in Frappe
+        window.open(`/app/sales-invoice/${response.sales_invoice_name}`, "_blank");
+        
+        onClose();
+        if(onActionComplete) onActionComplete();
+      } else {
+        addToast("Processed return, but no invoice returned.", "warning");
+        onClose();
       }
-      else {
-        bookingEntryRedirect();
-        closeReturnModal();
-        addToast("Return Booking Successful!", "success");
-      }
-    } catch (error) {
-      console.error("Return Booking Failed:", error);
+    } catch (err) {
+      addToast(err.message || "Failed to process return.", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleCreatePaymentEntry = async () => {
-    try {
-      const bookingEntryId = id;
-      const csrfToken = getCSRFToken();
-
-      const response = await createPaymentEntry(bookingEntryId, csrfToken);
-      closeReturnModal();
-      addToast("Payment Entry created successfully", "success");
-
-      const paymentEntryData = response.message;
-      console.log("paymentEntryData", paymentEntryData);
-      const redirectUrl = `${VITE_PUBLIC_PAYMENT_ENTRY_LINK}/${paymentEntryData}`;
-      window.location.href = redirectUrl;
-    } catch (error) {
-      console.error("Return Booking Failed:", error);
-      addToast("All invoices are already paid for this booking entry", "error");
-    }
-  };
-
-  const bookingEntryRedirect = () => {
-    const redirectUrl = `${VITE_PUBLIC_BOOKING_ENTRY_LINK}/${id}`;
-    window.location.href = redirectUrl;
-  };
-
-  const saleInvoiceRedirect = () => {
-    const redirectUrl = `${VITE_PUBLIC_SALE_INVOICE_LINK}${id}`;
-    window.open(redirectUrl, "_blank");
-    closeReturnModal();
-    addToast("Redirect to Sale Invoice");
-  };
-
-  if (!show) return null;
+  if (!booking) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-40 flex justify-center items-center px-4">
-      <div className="bg-white p-4 rounded-lg shadow-lg w-full max-w-4xl max-h-full overflow-auto relative">
-        <button
-          className="absolute top-4 right-4 bg-transparent border-none text-md cursor-pointer p-1 rounded-full flex items-center justify-center hover:bg-gray-200"
-          onClick={onClose}
-        >
-          <IoMdClose />
-        </button>
-        <div className="border border-[#E53E3E] p-6 rounded-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <h1 className="text-lg sm:text-xl font-bold mb-4 sm:mb-0">
-              Process {activeTab === "return" ? "Return" : "Extend"} for Order{" "}
-              <span className="text-gray-600">{id}</span>
-            </h1>
-            <div className="flex space-x-2">
-              <button
-                className={`${
-                  activeTab === "return"
-                    ? "bg-[#E53E3E] text-black border border-[#E53E3E]"
-                    : "bg-white text-gray-700"
-                } px-2 py-1 rounded text-sm border hover:bg-[#E53E3E] border-gray-800 hover:border-[#E53E3E]`}
-                onClick={() => setActiveTab("return")}
-              >
-                Return Booking
-              </button>
-              {!isBookingReturned && (
-                <button
-                  className={`${
-                    activeTab === "extend"
-                      ? "bg-[#E53E3E] text-black border border-[#E53E3E]"
-                      : "bg-white text-gray-700"
-                  } px-2 py-1 rounded text-sm border hover:bg-[#E53E3E] border-gray-800 hover:border-[#E53E3E]`}
-                  onClick={() => setActiveTab("extend")}
-                >
-                  Extend Booking
-                </button>
-              )}
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Return Processing</h2>
+            <p className="text-sm text-slate-500 font-medium">{booking?.name} • {booking?.customer_name}</p>
           </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+            <IoMdClose size={24} />
+          </button>
+        </div>
 
-          {activeTab === "return" && (
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-slate-500">Loading details...</p>
+            </div>
+          ) : (
             <>
-              <div className="bg-[#E53E3E] text-black px-4 py-2 rounded-t-md mb-4 mt-5 w-full">
-                Items
-              </div>
-              <div className="flex flex-col sm:space-y-2">
-                {rentalItems.length > 0 ? (
-                  rentalItems.map((item, index) => {
-                    const isBundleItem = bundleIds.has(item.item_name);
-
-                    return (
-                      <div
-                        key={index}
-                        className="flex flex-col sm:flex-row sm:space-x-4 items-center"
-                      >
-                        <div className="flex-1">
-                          <InventoryItem
-                            name={item.item_name}
-                            remark={remarks[item.item_name] || ""}
-                            onRemarkChange={handleRemarkChange}
-                            isBundleItem={isBundleItem}
-                            isReturned={item.isReturned}
-                          />
-                        </div>
-
-                        {!isBundleItem && (
-                          <div className="flex space-x-4 mt-2 sm:mt-0">
-                            {item.isReturned ? (
-                              <span className="text-green-700 font-bold pr-10">
-                                Item Returned
-                              </span>
-                            ) : (
-                              <>
-                                <button
-                                  className={`px-3 py-1 text-sm rounded-lg border ${
-                                    acceptedItems[index]
-                                      ? "bg-green-500 text-white"
-                                      : "border-black text-gray-700"
-                                  }`}
-                                  onClick={() => handleAccept(index)}
-                                >
-                                  {acceptedItems[index] ? "Accepted" : "Accept"}
-                                </button>
-
-                                <select
-                                  id={`warehouse-${index}`}
-                                  className={`text-gray-700 text-sm px-2 py-1 rounded-lg border ${
-                                    acceptedItems[index]
-                                      ? "bg-yellow-300"
-                                      : "bg-white border-black"
-                                  } focus:outline-none cursor-pointer`}
-                                  value={selectedWarehouses[index] || ""}
-                                  onChange={(e) =>
-                                    handleWarehouseChange(index, e.target.value)
-                                  }
-                                  disabled={!acceptedItems[index]}
-                                >
-                                  <option value="" disabled>
-                                    Select a Warehouse
-                                  </option>
-                                  {warehouses.map((warehouse, wIndex) => (
-                                    <option
-                                      key={wIndex}
-                                      value={warehouse.warehouse_name}
-                                    >
-                                      {warehouse.warehouse_name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+              {/* Items Section */}
+              <section>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Items Pending Return</h3>
+                {items.length === 0 ? (
+                  <p className="text-slate-500 text-sm">No items pending return.</p>
                 ) : (
-                  <p className="text-gray-500 font-bold text-lg mt-5">
-                    No Items found.
-                  </p>
+                  items.map((item, index) => (
+                    <InventoryItem
+                      key={index}
+                      item={item}
+                      index={index}
+                      warehouses={warehouses}
+                      accepted={!!acceptedItems[index]}
+                      selectedWarehouse={selectedWarehouses[index]}
+                      remark={itemRemarks[index]}
+                      onAcceptToggle={handleAcceptToggle}
+                      onWarehouseChange={handleWarehouseChange}
+                      onRemarkChange={handleRemarkChange}
+                    />
+                  ))
                 )}
-              </div>
-              {!isBookingReturned && (
-                <div>
-                  <div className="flex flex-col space-y-4 mt-4">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox accent-[#E53E3E]"
-                        id="blacklist-checkbox"
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            document.querySelector(
-                              "#yellowlist-checkbox"
-                            ).checked = false;
-                          }
-                        }}
-                      />
-                      <span className="ml-2 text-gray-700 text-sm">
-                        Black List the Customer
-                      </span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox accent-[#E53E3E]"
-                        id="yellowlist-checkbox"
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            document.querySelector(
-                              "#blacklist-checkbox"
-                            ).checked = false;
-                          }
-                        }}
-                      />
-                      <span className="ml-2 text-gray-700 text-sm">
-                        Yellow List the Customer
-                      </span>
-                    </label>
-                  </div>
+              </section>
 
-                  <textarea
-                    placeholder="Add remarks (Optional)"
-                    id="remarks-textarea"
-                    className="w-full border rounded-lg p-2 mt-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-[#4B5150] text-white"
-                  ></textarea>
-
-                  <div className="flex justify-between mt-4">
-                    <button
-                      className="text-gray-500 px-1 py-1 text-sm"
-                      // onClick={() => setShowAdditionalCharge(!showAdditionalCharge)}
-                    >
-                      Additional Charges Items
-                    </button>
-                  </div>
-                </div>
-              )}
-              {!isBookingReturned && (
-                <div className="mt-2">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead>
-                      <tr className="bg-slate-50 text-gray-700 text-sm font-semibold border-b border-gray-200">
-                        <th className="border border-gray-300 px-3 py-1">
-                          <input
-                            type="checkbox"
-                            checked={
-                              selectedRows.length === selectedItems.length &&
-                              selectedItems.length > 0
-                            }
-                            onChange={handleSelectAll}
-                          />
-                        </th>
-                        <th className="border border-gray-300 px-3 py-1">
-                          S.No
-                        </th>
-                        <th className="border border-gray-300 px-3 py-1">
-                          Items
-                        </th>
-                        <th className="border border-gray-300 px-3 py-1">
-                          Amount (INR)
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedItems.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan="4"
-                            className="text-center text-gray-500 py-2"
-                          >
-                            No data available
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedItems.map((item, index) => (
-                          <tr
-                            key={index}
-                            className="bg-gray-100 text-black text-sm"
-                          >
-                            <td className="border border-gray-300 px-3 py-1 text-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedRows.includes(index)}
-                                onChange={() => handleRowSelect(index)}
-                              />
-                            </td>
-                            <td className="border border-gray-300 px-3 py-1 text-center">
-                              {index + 1}
-                            </td>
-                            <td className="border border-gray-300 px-3 py-1">
-                              <select
-                                className="bg-transparent border p-1 text-black"
-                                value={item.item_code}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    index,
-                                    "item_code",
-                                    e.target.value
-                                  )
-                                }
-                              >
-                                <option value="" disabled>
-                                  Select Item
-                                </option>
-                                {serviceItem.map((data, i) => (
-                                  <option
-                                    key={i}
-                                    value={data.item_code}
-                                    className="text-black"
-                                  >
-                                    {data.item_code}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="border border-gray-300 px-3 py-1">
-                              <input
-                                type="number"
-                                className="w-full bg-transparent border p-1 text-black"
-                                value={item.rate}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    index,
-                                    "rate",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={addNewRow}
-                    className="mt-1 bg-primary px-3 py-1.5 w-auto text-sm text-white font-medium rounded-lg shadow-sm hover:bg-primary-hover transition-colors"
-                  >
-                    Add Items
+              {/* Additional Charges Section */}
+              <section className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Additional Charges</h3>
+                  <button onClick={handleAddCharge} className="text-sm font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg">
+                    + Add Charge
                   </button>
-                  {selectedRows.length > 0 && (
-                    <button
-                      onClick={deleteSelectedRows}
-                      className="bg-primary px-3 py-1.5 w-auto text-sm text-white font-medium rounded-lg shadow-sm hover:bg-primary-hover ml-2 transition-colors"
-                    >
-                      Delete Items
-                    </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {additionalCharges.map((charge, index) => (
+                    <div key={index} className="flex gap-3 items-center">
+                      <select
+                        className="flex-1 p-2.5 text-sm font-medium border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                        value={charge.item_code}
+                        onChange={(e) => handleChargeChange(index, "item_code", e.target.value)}
+                      >
+                        <option value="">Select Service Item</option>
+                        {serviceItems.map((item, i) => (
+                          <option key={i} value={item.name}>{item.item_name}</option>
+                        ))}
+                      </select>
+                      
+                      <div className="relative w-1/3">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                        <input
+                          type="number"
+                          className="w-full p-2.5 pl-8 text-sm font-medium border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="Amount"
+                          value={charge.rate}
+                          onChange={(e) => handleChargeChange(index, "rate", e.target.value)}
+                        />
+                      </div>
+                      
+                      <button onClick={() => handleRemoveCharge(index)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                        <IoMdClose size={20} />
+                      </button>
+                    </div>
+                  ))}
+                  {additionalCharges.length === 0 && (
+                    <p className="text-sm text-slate-400 font-medium">No additional charges added.</p>
                   )}
                 </div>
-              )}
-              <div className="flex justify-end mt-4">
-                <button
-                  className="text-black px-4 py-2 rounded-lg border bg-gray-300 border-gray-200 text-sm font-bold cursor-pointer"
-                  onClick={bookingEntryRedirect}
-                >
-                  Document Return
-                </button>
-                <button
-                  className="ml-2 text-black px-4 py-2 rounded-lg border bg-gray-300 border-gray-200 text-sm font-bold cursor-pointer"
-                  onClick={handleCreatePaymentEntry}
-                >
-                  Settle Payment
-                </button>
-                <button
-                  className="ml-2 text-black px-4 py-2 rounded-lg border bg-gray-300 border-gray-200 text-sm font-bold cursor-pointer"
-                  onClick={saleInvoiceRedirect}
-                >
-                  View Sales Invoice
-                </button>
-                {!isBookingReturned && (
-                  <button
-                    className="ml-2 text-white px-4 py-2 rounded-lg bg-primary text-sm font-bold cursor-pointer shadow-sm hover:bg-primary-hover transition-colors"
-                    onClick={handleReturnBooking}
-                  >
-                    Return Booking
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+              </section>
 
-          {activeTab === "extend" && (
-            <>
-              <div className="bg-slate-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-t-lg mb-4 mt-5 w-full">
-                Items
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:space-x-4">
-                <div className="flex-1">
-                  {rentalItems.map((item, index) => (
-                    <ExtendBookingItem key={index} name={item.item_name} />
-                  ))}
+              {/* Customer Flags */}
+              <section>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Customer Flags</h3>
+                
+                <div className="flex flex-col sm:flex-row gap-6 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={customerYellowList} onChange={(e) => setCustomerYellowList(e.target.checked)} className="w-4 h-4 text-amber-500 focus:ring-amber-500 rounded border-slate-300" />
+                    <span className="text-sm font-semibold text-slate-700">Yellowlist Customer</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={customerBlackList} onChange={(e) => setCustomerBlackList(e.target.checked)} className="w-4 h-4 text-rose-500 focus:ring-rose-500 rounded border-slate-300" />
+                    <span className="text-sm font-semibold text-slate-700">Blacklist Customer</span>
+                  </label>
                 </div>
-
-                {/* <div className="flex space-x-4 mt-4 sm:mt-0">
-                  <div className="flex flex-col space-y-2">
-                    <button className="text-gray-700 px-3 py-1 text-sm rounded-lg border border-black text-left">
-                      Accept
-                    </button>
-                    <button className="text-gray-700 px-3 py-1 text-sm rounded-lg border border-black text-left">
-                      Accept
-                    </button>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <button className="bg-white hover:bg-gray-50 text-gray-800 px-4 py-1.5 text-sm rounded-lg border border-gray-300 transition-colors">
-                      Service
-                    </button>
-                    <button className="bg-white hover:bg-gray-50 text-gray-500 px-4 py-1.5 text-sm rounded-lg border border-gray-300 transition-colors">
-                      Warehouse
-                    </button>
-                  </div>
-                </div> */}
-              </div>
-
-              {/* <div className="relative w-full sm:w-64 mt-10">
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  dateFormat="dd/MM/yyyy"
-                  className="w-full pr-20 px-2 py-2 text-gray-300 bg-gray-800 rounded-lg border border-gray-600 placeholder-gray-400"
-                  placeholderText="day/month/year"
+                
+                <textarea
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                  rows="3"
+                  placeholder="Internal remarks regarding the customer (Optional)"
+                  value={customerRemarks}
+                  onChange={(e) => setCustomerRemarks(e.target.value)}
                 />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <FaCalendarMinus className="text-red-600" />
-                </div>
-              </div> */}
-
-              <div className="flex justify-end mt-4">
-                <button
-                  className="text-white px-4 py-2.5 rounded-lg bg-primary text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors"
-                  onClick={handleOpenExtendModal}
-                >
-                  Extend Booking
-                </button>
-              </div>
+              </section>
             </>
           )}
         </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-all">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || submitting}
+            className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {submitting ? (
+              <><span className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></span> Processing...</>
+            ) : (
+              "Complete Return & Open Invoice"
+            )}
+          </button>
+        </div>
       </div>
-      <AvailabilityStatusModal
-        isOpen={isExtendModalOpen}
-        onClose={handleCloseExtendModal}
-        bookingId={id}
-        actualToDate={date}
-        addToast={addToast}
-        onRedirectToRentalAssetList={onRedirectToRentalAssetList}
-        toDate={toDate}
-        setToDate={setToDate}
-        formatDate={formatDate}
-        itemNames={itemNames}
-        fetchData={fetchData}
-      />
     </div>
   );
-}
+};
 
 export default ReturnOrderPopup;

@@ -78,7 +78,9 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
             frappe.get_doc("Quotation", existing_quotation[0]["name"])
             if existing_quotation else frappe.new_doc("Quotation")
         )
-        default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+        default_company = frappe.db.get_single_value("Branding Settings", "company_name")
+        if not default_company:
+            default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
         if not default_company:
             default_company = frappe.db.get_value("Company", {}, "name")
 
@@ -411,7 +413,9 @@ def create_sales_order_and_booking_entry(quotation_name, sales_person=None):
         # No longer creating Rental Bookings here
         # The Booking Entry will be created below (if needed) or by the submit_and_create_sales_order_booking method.
         
-        default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+        default_company = frappe.db.get_single_value("Branding Settings", "company_name")
+        if not default_company:
+            default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
         if not default_company:
             default_company = frappe.db.get_value("Company", {}, "name")
         sales_order = frappe.new_doc("Sales Order")
@@ -534,7 +538,9 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
             quotation.submit()
         
         # Proceed with creating the sales order and booking entry
-        default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+        default_company = frappe.db.get_single_value("Branding Settings", "company_name")
+        if not default_company:
+            default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
         if not default_company:
             default_company = frappe.db.get_value("Company", {}, "name")
         sales_order = frappe.new_doc("Sales Order")
@@ -598,7 +604,9 @@ def submit_and_create_sales_order_booking(quotation_name, sales_person=None, is_
                 "stock_quantity": item.stock_quantity,
                 "pricelist_name": item.pricelist_name,
                 "price": item.price,
-                "amount": item.amount
+                "amount": item.amount,
+                "serial_no": item.serial_no,
+                "asset_instance": item.asset_instance
             })
         
         booking_entry.insert(ignore_permissions=True)

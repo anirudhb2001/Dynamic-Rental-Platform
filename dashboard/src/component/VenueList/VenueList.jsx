@@ -36,7 +36,7 @@ import axios from "axios";
 
 axios.get("/api/data");
 
-const RentalAssetList = ({
+const VenueList = ({
   stockQuantities,
   setStockQuantities,
   setMainCartItems,
@@ -1233,4 +1233,4 @@ const RentalAssetList = ({
   );
 };
 
-export default RentalAssetList;
+export default VenueList;

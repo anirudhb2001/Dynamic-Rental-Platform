@@ -5,8 +5,13 @@ from frappe import _
 @frappe.whitelist()
 def warehouse_validate(doc, method=None):
     if doc.custom_is_customer_warehouse:
-        if frappe.db.exists('Warehouse', {'custom_is_customer_warehouse': 1}):
-            frappe.throw('Customer Warehouse Already Exists')
+        existing = frappe.db.get_all('Warehouse', filters={
+            'custom_is_customer_warehouse': 1,
+            'company': doc.company,
+            'name': ['!=', doc.name]
+        }, limit=1)
+        if existing:
+            frappe.throw(f'Customer Warehouse Already Exists for company {doc.company}')
 
 def sales_invoice_validate(doc, method=None):
     has_rental_services = any(

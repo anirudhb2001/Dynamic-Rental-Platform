@@ -27,7 +27,7 @@ import {
   VITE_PUBLIC_SALE_INVOICE_URL,
 } from "../../../../constants.js";
 
-function RentalCart({
+function VenueBookingCart({
   mainCartItems,
   setMainCartItems,
   selectedCustomer,
@@ -80,7 +80,7 @@ function RentalCart({
           setAuthMode(data.authentication_mode);
         }
       } catch (err) {
-        console.error("Failed to fetch branding settings in RentalCart:", err);
+        console.error("Failed to fetch branding settings in VenueBookingCart:", err);
       }
     };
     fetchBranding();
@@ -727,9 +727,7 @@ function RentalCart({
             {mainCartItems.map((item, index) => (
               <li
                 key={index}
-                className="flex flex-col items-center w-full border-b p // ? mainCartItems.reduce((acc, item) => item.total || 0, 0)
-            //   // : 0
-            // }`}b-2 last:border-none"
+                className="flex flex-col items-center w-full border-b p-2 pb-2 last:border-none"
               >
                 <div className="flex items-center p-0 border border-gray-100 rounded-xl mb-2 w-full h-[70px] shadow-sm bg-white overflow-hidden">
                   <div className="bg-gray-50 flex items-center justify-center max-w-[100px] w-full h-full border-r border-gray-100 mr-2.5">
@@ -1205,4 +1203,4 @@ function RentalCart({
   );
 }
 
-export default RentalCart;
+export default VenueBookingCart;

@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import { IoIosArrowDown } from "react-icons/io";
 import { BsArrowDownUp } from "react-icons/bs";
 
-const CardList = ({
+const ReservationList = ({
   addToast,
   onRedirectToRentalAssetList,
   financialData,
@@ -275,7 +275,7 @@ const CardList = ({
           ))
         ) : (
           <div className="col-span-full text-center text-gray-500">
-            No rental bookings available for return.
+            No reservations available.
           </div>
         )}
       </div>
@@ -292,4 +292,4 @@ const CardList = ({
   );
 };
 
-export default CardList;
+export default ReservationList;

@@ -720,7 +720,7 @@ export const removeCartItem = async (
   }
 };
 
-export const rentalReturnBooking = async (
+export const processReturnBooking = async (
   bookingEntryId,
   additionalCharges = [],
   itemWarehouses = [],
@@ -742,9 +742,10 @@ export const rentalReturnBooking = async (
     };
 
     const response = await axios.post(
-      `${VITE_PUBLIC_RETURN_BOOKING}.rental_return_booking`,
+      `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.booking_actions_api.process_return`,
       payload,
       {
+        withCredentials: true,
         headers: {
           "Content-Type": "application/json",
           "X-Frappe-CSRF-Token": csrfToken,
@@ -752,10 +753,27 @@ export const rentalReturnBooking = async (
       }
     );
 
+    return response.data.message || response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Error processing return"
+    );
+  }
+};
+
+export const getBookingEntryItems = async (bookingEntryId) => {
+  try {
+    const response = await axios.get(
+      `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.booking_actions_api.get_booking_entry_items`,
+      {
+        params: { booking_entry_id: bookingEntryId },
+        withCredentials: true,
+      }
+    );
     return response.data.message;
   } catch (error) {
     throw new Error(
-      error.response?.data?.message || "Error processing rental return booking"
+      error.response?.data?.message || "Failed to fetch booking items"
     );
   }
 };
@@ -830,7 +848,7 @@ export const processRentalReturn = async (
 export const estimateCartTaxes = async (quotationName) => {
   try {
     const response = await axios.post(
-      `${VITE_PUBLIC_API_URL}/api/method/rental_platform.web_api.cart.estimate_cart_taxes`,
+      "/api/method/rental_platform.web_api.cart.estimate_cart_taxes",
       { quotation_name: quotationName }
     );
     return response.data;

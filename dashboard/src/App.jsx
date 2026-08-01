@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { FrappeProvider } from "frappe-react-sdk";
 import SideNav from "./component/Sidenav/SideNav";
-import RentalAssetList from "./component/RentalAssetList/RentalAssetList";
-import CardList from "./component/CardList";
-import ReturnDashboard from "./component/ReturnDashboard/ReturnDashboard";
+import VenueList from "./component/VenueList/VenueList";
+import ReservationList from "./component/ReservationList.jsx";
+import ReportsDashboard from "./component/ReportsDashboard/ReportsDashboard.jsx";
+import AvailabilityCalendar from "./component/AvailabilityCalendar/AvailabilityCalendar.jsx";
 import Header from "./component/Header/Header";
-import RentalCart from "./component/RentalCart/RentalCart";
+import VenueBookingCart from "./component/VenueBookingCart/VenueBookingCart";
 import Toast from "./component/ToastAlerts/Toast.jsx";
 import dayjs from "dayjs";
 import { VITE_AUTHENTICATION } from "../../constants.js";
@@ -33,15 +34,19 @@ function App() {
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
   const [selectedItemAvailStatus, setSelectedItemAvailStatus] = useState("");
   const [globalKpis, setGlobalKpis] = useState(null);
-  const [activeComponent, setActiveComponent] = useState("rentalAssetList");
-  const [isComponentSidenavVisible, setIsComponentSidenavVisible] =
-    useState(true);
+  const [activeComponent, setActiveComponent] = useState("dashboard");
+  const [isComponentSidenavVisible, setIsComponentSidenavVisible] = useState(true);
   const [totalAmountCart, settotalAmountCart] = useState([]);
   const [mainCartItems, setMainCartItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
-  const [pickupDate, setPickupDate] = useState(null);
-  const [returnDate, setReturnDate] = useState(null);
-  const [actual_returnDate, setActual_ReturnDate] = useState(null);
+  const [eventDate, setEventDate] = useState(null);
+  const [timeSlot, setTimeSlot] = useState(null);
+  
+  // Aliases for backward compatibility with existing code
+  const pickupDate = eventDate;
+  const returnDate = timeSlot;
+  const actual_returnDate = timeSlot;
+  
   const [adminSelectedCustomer, setAdminSelectedCustomer] = useState("");
   const [quantities, setQuantities] = useState({});
   const [quotationNames, setQuotationNames] = useState([]);
@@ -51,7 +56,7 @@ function App() {
   const [pageSize] = useState(12);
   const [totalPages, setTotalPages] = useState(0);
   const [pageNumbers, setPageNumbers] = useState({});
-  const [activeTab, setActiveTab] = useState("rental");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [rentalItemsForRentalAssetList, setRentalItemsForRentalAssetList] = useState([]);
   const [isDateFieldDisabled, setDateFieldDisabled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -404,21 +409,19 @@ function App() {
 
   useEffect(() => {
     const savedTab = localStorage.getItem("activeTab");
-    if (savedTab) {
+    const validTabs = ["dashboard", "reports", "calendar", "venues", "reservations"];
+    if (savedTab && validTabs.includes(savedTab)) {
       setActiveTab(savedTab);
-      setActiveComponent(savedTab === "return" ? "returnDashboard" : "rentalAssetList");
+      setActiveComponent(savedTab);
+    } else {
+      setActiveTab("dashboard");
+      setActiveComponent("dashboard");
     }
   }, []);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    if (tab === "rental") {
-      setActiveComponent("rentalAssetList");
-    } else if (tab === "return") {
-      setActiveComponent("returnDashboard");
-    } else {
-      setActiveComponent("cardList");
-    }
+    setActiveComponent(tab);
     localStorage.setItem("activeTab", tab);
   };
 
@@ -429,8 +432,8 @@ function App() {
     actualToDate,
     toDate
   ) => {
-    setActiveComponent("rentalAssetList");
-    setActiveTab("rental");
+    setActiveComponent("venues");
+    setActiveTab("venues");
     setRentalItemsForRentalAssetList(rentalItems);
 
     const pickup = actualToDate
@@ -833,13 +836,23 @@ function App() {
             </div>
 
             <div
-              className={`${activeComponent === "rentalAssetList"
+              className={`${activeComponent === "venues"
                   ? "col-span-12 sm:col-span-6"
                   : "col-span-12 sm:col-span-9"
                 }`}
             >
-              {activeComponent === "rentalAssetList" ? (
-                <RentalAssetList
+              {activeComponent === "dashboard" || activeComponent === "reports" ? (
+                <ReportsDashboard 
+                  allBookingData={allBookingData} 
+                  financialData={financialData} 
+                />
+              ) : activeComponent === "calendar" ? (
+                <AvailabilityCalendar 
+                  addToast={addToast}
+                  allBookingData={allBookingData} 
+                />
+              ) : activeComponent === "venues" ? (
+                <VenueList
                   stockQuantities={stockQuantities}
                   setStockQuantities={setStockQuantities}
                   setMainCartItems={setMainCartItems}
@@ -847,9 +860,9 @@ function App() {
                   onContinueToCheckout={handleContinueToCheckout}
                   cartItems={cartItems}
                   setCartItems={setCartItems}
-                  pickupDate={pickupDate}
-                  returnDate={returnDate}
-                  actual_returnDate={actual_returnDate}
+                  pickupDate={eventDate}
+                  returnDate={timeSlot}
+                  actual_returnDate={timeSlot}
                   selectedCustomer={selectedCustomer}
                   quantities={quantities}
                   setQuantities={setQuantities}
@@ -884,22 +897,8 @@ function App() {
                   setSortOption={setSortOption}
                   customerDetails={customerDetails}
                 />
-              ) : activeComponent === "returnDashboard" ? (
-                <ReturnDashboard 
-                  addToast={addToast}
-                  quotationNames={quotationNames} 
-                  portalMode={portalMode} 
-                  branding={brandingData}
-                  filterCustomer={filterCustomer}
-                  filterWarehouse={filterWarehouse}
-                  filterStatus={filterDateStatus}
-                  filterInvoiceStatus={selectedSalesInvoiceStatus}
-                  fromDate={extendpickupDate}
-                  toDate={extendreturnDate}
-                  searchQuery={searchQuery}
-                />
-              ) : (
-                <CardList
+              ) : activeComponent === "reservations" ? (
+                <ReservationList
                   addToast={addToast}
                   quotationNames={quotationNames}
                   onRedirectToRentalAssetList={handleRedirectToRentalAssetList}
@@ -919,13 +918,18 @@ function App() {
                   fetchData={fetchData}
                   customerDetails={customerDetails}
                 />
+              ) : (
+                <div className="w-full flex flex-col h-[calc(100vh-6rem)] overflow-y-auto rounded-3xl bg-white/45 p-5 backdrop-blur-xl">
+                  <h2 className="text-2xl font-black mb-4">Event Types</h2>
+                  <p className="text-slate-500">Event types management coming soon.</p>
+                </div>
               )}
             </div>
 
             {/* Rental Cart */}
-            {activeComponent === "rentalAssetList" && (
+            {activeComponent === "venues" && (
               <div className="col-span-12 sm:col-span-3">
-                <RentalCart
+                <VenueBookingCart
                   mainCartItems={mainCartItems}
                   setMainCartItems={setMainCartItems}
                   selectedCustomer={selectedCustomer}

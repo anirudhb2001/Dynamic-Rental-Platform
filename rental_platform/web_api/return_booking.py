@@ -115,18 +115,26 @@ def create_stock_entry_on_return(booking_entry_id, item_warehouses=None):
     if not booking_entry_id or not frappe.db.exists('Booking Entry', booking_entry_id):  
         frappe.throw("Booking Entry not Found")
         
-    if not frappe.db.exists('Warehouse', {'custom_is_customer_warehouse': 1}):
-        frappe.throw(
-            _("Customer Warehouse must be set before proceeding."),
-            title=_("Validation Error"),
-            exc=frappe.ValidationError
-        )
-
-    customer_warehouse = frappe.db.get_value('Warehouse', {'custom_is_customer_warehouse': 1}, 'name')
     doc = frappe.get_doc('Booking Entry', booking_entry_id)
 
     so_warehouse, company = frappe.db.get_value("Sales Order", doc.sales_order, ["set_warehouse", "company"])
     item_wrh = so_warehouse
+    
+    customer_warehouse = frappe.db.get_value('Warehouse', {'custom_is_customer_warehouse': 1, 'company': company}, 'name')
+    if not customer_warehouse:
+        company_abbr = frappe.db.get_value("Company", company, "abbr")
+        cw_name = f"Customer Warehouse - {company_abbr}"
+        if not frappe.db.exists("Warehouse", cw_name):
+            cw = frappe.new_doc("Warehouse")
+            cw.warehouse_name = "Customer Warehouse"
+            cw.company = company
+            cw.custom_is_customer_warehouse = 1
+            cw.is_group = 0
+            cw.insert(ignore_permissions=True)
+            customer_warehouse = cw.name
+        else:
+            frappe.db.set_value("Warehouse", cw_name, "custom_is_customer_warehouse", 1)
+            customer_warehouse = cw_name
     
     if not item_wrh and company:
         company_abbr = frappe.db.get_value("Company", company, "abbr")
@@ -142,6 +150,23 @@ def create_stock_entry_on_return(booking_entry_id, item_warehouses=None):
     stock_remaining = get_remaining_items(booking_entry_id)
     
     if stock_remaining:
+        if not item_warehouses:
+            item_warehouses = []
+            be = frappe.get_doc("Booking Entry", booking_entry_id)
+            for stock_item in stock_remaining:
+                serial_no = None
+                for r_item in be.rental_items:
+                    if r_item.rental_item_id == stock_item["item_code"]:
+                        serial_no = r_item.serial_no or r_item.asset_instance
+                        break
+                
+                item_warehouses.append({
+                    "rental_item_id": stock_item["item_code"],
+                    "quantity": stock_item["remaining_qty"],
+                    "warehouse": item_wrh,
+                    "serial_no": serial_no
+                })
+
         validate_item_stock(item_warehouses, stock_remaining)
         
         stock_entry = frappe.new_doc('Stock Entry')
@@ -161,14 +186,21 @@ def create_stock_entry_on_return(booking_entry_id, item_warehouses=None):
                 else:
                     item_warehouse = item_wrh
 
-                stock_entry.append('items', {
+                se_item = {
                     'item_code': rental_item.get("rental_item_id"),
                     'qty': rental_item.get("quantity") if rental_item.get("quantity") else 1,
                     'uom': 'Nos',
                     's_warehouse': customer_warehouse,
                     't_warehouse': item_warehouse,
                     'allow_zero_valuation_rate': 1
-                })
+                }
+                
+                if rental_item.get("serial_no"):
+                    se_item['serial_no'] = rental_item.get("serial_no")
+                elif rental_item.get("asset_instance"):
+                    se_item['serial_no'] = rental_item.get("asset_instance")
+                    
+                stock_entry.append('items', se_item)
 
         stock_entry.flags.ignore_permissions = True                      
         stock_entry.insert()

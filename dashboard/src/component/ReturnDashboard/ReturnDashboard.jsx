@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { VITE_AUTHENTICATION } from "../../../../constants.js";
 import ReturnCard from "./ReturnCard";
 import { LuCalendarClock, LuAlertCircle, LuClipboardCheck, LuFileText, LuCheckCircle2, LuPackage } from "react-icons/lu";
+import ReturnOrderPopup from "../ReturnOrderPopup/ReturnOrderPopup";
 
 const ReturnDashboard = ({ 
   addToast, portalMode, branding,
@@ -21,6 +22,8 @@ const ReturnDashboard = ({
   const [activeTab, setActiveTab] = useState("Active Rentals");
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBookingForReturn, setSelectedBookingForReturn] = useState(null);
+  const [sortOption, setSortOption] = useState("Latest");
 
   const tabs = ["Active Rentals", "Due Today", "Overdue", "Return Pending", "Completed"];
 
@@ -98,6 +101,14 @@ const ReturnDashboard = ({
       
       return true;
     });
+    
+    return filtered.sort((a, b) => {
+      if (sortOption === "Latest") return dayjs(b.creation).unix() - dayjs(a.creation).unix();
+      if (sortOption === "Oldest") return dayjs(a.creation).unix() - dayjs(b.creation).unix();
+      if (sortOption === "Amount: High to Low") return b.agreement_amount - a.agreement_amount;
+      if (sortOption === "Amount: Low to High") return a.agreement_amount - b.agreement_amount;
+      return 0;
+    });
   };
 
   const filteredBookings = getFilteredBookings();
@@ -113,17 +124,33 @@ const ReturnDashboard = ({
         <KpiCard title="Completed Today" count={stats.completed_today} icon={<LuCheckCircle2 />} color="text-green-500" bg="bg-green-50" />
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-2 mb-6 border-b border-slate-200 pb-2">
-        {tabs.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === tab ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-200"}`}
+      {/* Tabs & Sort */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-slate-200 pb-4 gap-4 sm:gap-0">
+        <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
+          {tabs.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`whitespace-nowrap px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === tab ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-200"}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-500">Sort by:</span>
+          <select 
+            className="p-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
           >
-            {tab}
-          </button>
-        ))}
+            <option value="Latest">Latest First</option>
+            <option value="Oldest">Oldest First</option>
+            <option value="Amount: High to Low">Amount: High to Low</option>
+            <option value="Amount: Low to High">Amount: Low to High</option>
+          </select>
+        </div>
       </div>
 
       {/* Booking List */}
@@ -138,13 +165,26 @@ const ReturnDashboard = ({
                 key={booking.name} 
                 booking={booking} 
                 onActionComplete={handleActionComplete} 
-                addToast={addToast} 
+                addToast={addToast}
+                onOpenReturn={() => setSelectedBookingForReturn(booking)}
             />
           ))
         ) : (
           <div className="col-span-full text-center py-10 text-slate-500 font-medium">No bookings found in this category.</div>
         )}
       </div>
+
+      {selectedBookingForReturn && (
+        <ReturnOrderPopup
+            booking={selectedBookingForReturn}
+            onClose={() => setSelectedBookingForReturn(null)}
+            onActionComplete={() => {
+                setSelectedBookingForReturn(null);
+                handleActionComplete();
+            }}
+            addToast={addToast}
+        />
+      )}
     </div>
   );
 };

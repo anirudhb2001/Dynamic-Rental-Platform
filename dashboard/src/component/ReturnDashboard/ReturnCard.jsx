@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import dayjs from "dayjs";
-import { LuUser, LuPackage, LuCalendar, LuAlertTriangle, LuIndianRupee, LuCheck, LuArrowRight } from "react-icons/lu";
+import { LuUser, LuPackage, LuCalendar, LuAlertTriangle, LuIndianRupee, LuCheck, LuArrowRight, LuCheckCircle2 } from "react-icons/lu";
 import axios from "axios";
 import { VITE_AUTHENTICATION } from "../../../../constants.js";
 
-const ReturnCard = ({ booking, onActionComplete, addToast }) => {
+const ReturnCard = ({ booking, onActionComplete, onOpenReturn, addToast }) => {
   const [loading, setLoading] = useState(false);
 
   const getStatusBadge = (status) => {
@@ -16,7 +16,7 @@ const ReturnCard = ({ booking, onActionComplete, addToast }) => {
       case "Overdue": return "bg-red-100 text-red-700 ring-red-300";
       case "Due Today": return "bg-blue-100 text-blue-700 ring-blue-300";
       case "Reserved": return "bg-indigo-100 text-indigo-700 ring-indigo-300";
-      case "Picked Up": return "bg-cyan-100 text-cyan-700 ring-cyan-300";
+      case "Rented": return "bg-cyan-100 text-cyan-700 ring-cyan-300";
       default: return "bg-slate-100 text-slate-700 ring-slate-300";
     }
   };
@@ -25,7 +25,7 @@ const ReturnCard = ({ booking, onActionComplete, addToast }) => {
     const status = booking.booking_status;
     if (status === "Completed") return "100%";
     if (status === "Returned") return "75%";
-    if (status === "Picked Up") return "50%";
+    if (status === "Rented") return "50%";
     if (status === "Reserved") return "25%";
     return "0%";
   };
@@ -34,15 +34,25 @@ const ReturnCard = ({ booking, onActionComplete, addToast }) => {
     setLoading(true);
     try {
       const res = await axios.post(`${VITE_AUTHENTICATION}${actionUrl}`, 
-      { booking_id: booking.name }, { withCredentials: true });
-      if (res.data.message && !res.data.error) {
-        addToast(res.data.message, "success");
+      { booking_id: booking.name }, 
+      { 
+        withCredentials: true,
+        headers: {
+          "X-Frappe-CSRF-Token": typeof window !== "undefined" && window.csrf_token ? window.csrf_token : ""
+        }
+      });
+      const responseData = res.data.message || res.data;
+      const successMsg = typeof responseData === 'string' ? responseData : responseData?.message || responseData?.success;
+      const errorMsg = res.data.error || responseData?.error;
+
+      if (successMsg && !errorMsg) {
+        addToast(successMsg, "success");
         onActionComplete();
       } else {
-        addToast(res.data.error || "Action failed", "error");
+        addToast(errorMsg || "Action failed", "error");
       }
     } catch (err) {
-      addToast("Server Error", "error");
+      addToast(err.response?.data?.message || err.message || "Server Error", "error");
     }
     setLoading(false);
   };
@@ -99,7 +109,7 @@ const ReturnCard = ({ booking, onActionComplete, addToast }) => {
       <div className="mt-2 mb-4">
         <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-1">
           <span>Reserved</span>
-          <span>Picked Up</span>
+          <span>Rented</span>
           <span>Returned</span>
           <span>Completed</span>
         </div>
@@ -120,14 +130,21 @@ const ReturnCard = ({ booking, onActionComplete, addToast }) => {
             </button>
         )}
         
-        {booking.booking_status === "Picked Up" && (
-            <a 
-                href={`/app/rental-return/new?booking=${booking.name}`}
-                target="_blank" rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold py-2.5 rounded-xl transition-colors text-sm"
-            >
-                <LuCheck /> Create Rental Return
-            </a>
+        {booking.booking_status === "Rented" && (
+            <div className="flex gap-2 w-full">
+                <button 
+                    onClick={() => onOpenReturn && onOpenReturn()}
+                    className="w-1/2 flex items-center justify-center gap-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 font-bold py-2.5 rounded-xl transition-colors text-sm border border-yellow-200"
+                >
+                    <LuCheck /> Return Booking
+                </button>
+                <button 
+                    onClick={() => {}}
+                    className="w-1/2 flex items-center justify-center gap-2 bg-slate-50 text-slate-700 hover:bg-slate-100 font-bold py-2.5 rounded-xl transition-colors text-sm border border-slate-200"
+                >
+                    <LuCalendar /> Extend Booking
+                </button>
+            </div>
         )}
         
         {booking.booking_status === "Returned" && (

@@ -12,16 +12,16 @@
   "quotation",
   "sales_order",
   "status",
-  "return_status",
   "column_break_2yx1",
   "customer_name",
-  "pickup_from_date",
-  "rental_from_date",
-  "rental_to_date",
-  "actual_to_date",
-  "security_document_status",
+  "venue",
+  "event_type",
+  "event_date",
+  "time_slot",
+  "guest_count",
   "section_break_mpzd",
-  "rental_items"
+  "venue_capacity",
+  "special_instructions"
  ],
  "fields": [
   {
@@ -42,32 +42,9 @@
    "allow_on_submit": 1,
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Booking Entry Status",
-   "options": "\nReserved\nRented\nReturned\nPartially Returned\nCancelled\nComplete",
+   "label": "Booking Status",
+   "options": "Reserved\nConfirmed\nCompleted\nCancelled",
    "read_only": 1
-  },
-  {
-   "fieldname": "rental_from_date",
-   "fieldtype": "Datetime",
-   "label": "Rental from date"
-  },
-  {
-   "fieldname": "rental_to_date",
-   "fieldtype": "Datetime",
-   "label": "Rental to date"
-  },
-  {
-   "fieldname": "actual_to_date",
-   "fieldtype": "Datetime",
-   "label": "Actual to date"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "rental_items",
-   "fieldtype": "Table",
-   "label": "Rental items",
-   "options": "Booking details Table",
-   "reqd": 1
   },
   {
    "fieldname": "quotation",
@@ -93,23 +70,8 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "security_document_status",
-   "fieldtype": "Select",
-   "label": "Security Document Status",
-   "options": "\nDocument Returned\nDocument Pending To Return"
-  },
-  {
    "fieldname": "section_break_mpzd",
    "fieldtype": "Section Break"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "return_status",
-   "fieldtype": "Select",
-   "label": "Item Return Status",
-   "options": "\nOverdue\nPartially Overdue\nDue Today\nDue Tomorrow\nUpcoming\nActive",
-   "read_only": 1
   },
   {
    "fetch_from": "customer.customer_name",
@@ -119,10 +81,52 @@
    "options": "Customer"
   },
   {
-   "fieldname": "pickup_from_date",
-   "fieldtype": "Datetime",
-   "label": "Pickup from date",
-   "no_copy": 1
+   "fieldname": "venue",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Venue",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Event Type",
+   "options": "Event Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "event_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Event Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_slot",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Time Slot",
+   "options": "Time Slot",
+   "reqd": 1
+  },
+  {
+   "fieldname": "guest_count",
+   "fieldtype": "Int",
+   "label": "Guest Count"
+  },
+  {
+   "fetch_from": "venue.venue_capacity",
+   "fieldname": "venue_capacity",
+   "fieldtype": "Int",
+   "label": "Venue Capacity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "special_instructions",
+   "fieldtype": "Text",
+   "label": "Special Instructions"
   }
  ],
  "grid_page_length": 50,
@@ -130,7 +134,7 @@
  "is_calendar_and_gantt": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-17 08:36:38.721003",
+ "modified": "2026-07-31 22:30:58.101834",
  "modified_by": "Administrator",
  "module": "Rental Platform",
  "name": "Booking Entry",
