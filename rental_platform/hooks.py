@@ -173,6 +173,7 @@ doc_events = {
         },
     
     "Sales Invoice":{
+        "before_validate": "rental_platform.web_api.financial_hooks.set_hotel_property",
         "on_submit":"rental_platform.web_api.Updatestatus.update_booking_entry_status",
         "before_submit":"rental_platform.web_api.Updatestatus.create_stock_entry_on_sales_invoice_submit",
         "validate":"rental_platform.web_api.validate.sales_invoice_validate",
@@ -190,8 +191,12 @@ doc_events = {
         "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
     },
     "Sales Order": {
+        "before_validate": "rental_platform.web_api.financial_hooks.set_hotel_property",
         "on_submit": "rental_platform.email.order_confirmation",
         "validate": "rental_platform.web_api.validate.validate_portal_approval_status",
+    },
+    "Payment Entry": {
+        "before_validate": "rental_platform.web_api.financial_hooks.set_hotel_property"
     },
     "Rental Return": {
         "validate": "rental_platform.web_api.validate.validate_portal_approval_status",

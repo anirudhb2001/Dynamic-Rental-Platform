@@ -87,7 +87,8 @@ const ReservationList = ({
                 securityDocumentStatus: booking_detail.security_document_status || "",
                 bookingEntryStatus:
                   bookingStatusMap.get(booking_detail.booking_entry) || "Unknown",
-                isVenueReservation: !!booking_detail.venue
+                isVenueReservation: !!booking_detail.venue,
+                payment_entries: booking_detail.payment_entries || []
               };
             })
             .filter(

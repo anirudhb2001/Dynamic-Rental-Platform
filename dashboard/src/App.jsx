@@ -6,6 +6,10 @@ import ReservationList from "./component/ReservationList.jsx";
 import OperationalDashboard from "./component/OperationalDashboard/OperationalDashboard.jsx";
 import AvailabilityCalendar from "./component/AvailabilityCalendar/AvailabilityCalendar.jsx";
 import EventTypeList from "./component/EventTypeList/EventTypeList.jsx";
+import SalesOrderList from "./component/SalesOrderList/SalesOrderList.jsx";
+import InvoiceList from "./component/InvoiceList/InvoiceList.jsx";
+import SeatingTypeList from "./component/SeatingTypeList/SeatingTypeList.jsx";
+import TimeSlotList from "./component/TimeSlotList/TimeSlotList.jsx";
 import Header from "./component/Header/Header";
 import ReservationModal from "./component/AvailabilityCalendar/ReservationModal";
 import VenueBookingCart from "./component/VenueBookingCart/VenueBookingCart";
@@ -24,6 +28,7 @@ import {
   getItemWarehouse,
   getProductBundleList,
   getBrandingSettings,
+  getHotelPropertyContext,
 } from "./services/api.jsx";
 
 function App() {
@@ -44,6 +49,8 @@ function App() {
   const [eventDate, setEventDate] = useState(null);
   const [timeSlot, setTimeSlot] = useState(null);
   const [selectedHotelProperty, setSelectedHotelProperty] = useState("All Properties");
+  const [availableHotelProperties, setAvailableHotelProperties] = useState([]);
+  const [canViewAllProperties, setCanViewAllProperties] = useState(false);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   
   // Aliases for backward compatibility with existing code
@@ -174,6 +181,22 @@ function App() {
       }
     };
     fetchBranding();
+
+    const fetchPropertyContext = async () => {
+      const data = await getHotelPropertyContext();
+      if (data) {
+        setAvailableHotelProperties(data.properties || []);
+        setCanViewAllProperties(data.can_view_all_properties);
+        if (data.properties?.length === 1 && !data.can_view_all_properties) {
+          setSelectedHotelProperty(data.properties[0]);
+        } else if (data.default_property) {
+          setSelectedHotelProperty(data.default_property);
+        }
+      }
+    };
+    if (portalMode !== "customer") {
+      fetchPropertyContext();
+    }
   }, []);
 
   useEffect(() => {
@@ -854,14 +877,18 @@ function App() {
                 handleCustomerLogout={handleCustomerLogout}
                 customerDetails={customerDetails}
                 onNewReservationClick={() => setIsReservationModalOpen(true)}
+                selectedHotelProperty={selectedHotelProperty}
+                setSelectedHotelProperty={setSelectedHotelProperty}
+                availableHotelProperties={availableHotelProperties}
+                canViewAllProperties={canViewAllProperties}
               />
             </div>
 
             {/* Scrollable Main Content Wrapper */}
             <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-6 w-full relative">
-              <div className={`w-full ${activeComponent === "venues" ? "flex gap-4 items-start relative" : ""}`}>
+              <div className="w-full h-full">
                 {/* Active Component */}
-                <div className={`w-full ${activeComponent === "venues" ? "flex-1 w-full relative" : "w-full h-full"}`}>
+                <div className="w-full h-full">
                   {activeComponent === "dashboard" || activeComponent === "reports" ? (
                     <OperationalDashboard 
                       selectedHotelProperty={selectedHotelProperty}
@@ -874,6 +901,8 @@ function App() {
                       addToast={addToast}
                       allBookingData={allBookingData} 
                       refreshBookings={fetchData}
+                      selectedHotelProperty={selectedHotelProperty}
+                      canViewAllProperties={canViewAllProperties}
                     />
                   ) : activeComponent === "venues" ? (
                     <VenueList
@@ -944,6 +973,14 @@ function App() {
                     />
                   ) : activeComponent === "eventTypes" ? (
                     <EventTypeList />
+                  ) : activeComponent === "salesOrders" ? (
+                    <SalesOrderList selectedHotelProperty={selectedHotelProperty} />
+                  ) : activeComponent === "invoices" ? (
+                    <InvoiceList selectedHotelProperty={selectedHotelProperty} />
+                  ) : activeComponent === "seatingTypes" ? (
+                    <SeatingTypeList />
+                  ) : activeComponent === "timeSlots" ? (
+                    <TimeSlotList />
                   ) : (
                     <div className="w-full flex flex-col h-[calc(100vh-6rem)] overflow-y-auto rounded-3xl bg-white/45 p-5 backdrop-blur-xl">
                       <h2 className="text-2xl font-black mb-4">Under Construction</h2>
@@ -951,30 +988,6 @@ function App() {
                     </div>
                   )}
                 </div>
-
-                {/* Venue Booking Cart Sidebar for Venues Route */}
-                {activeComponent === "venues" && (
-                  <div className="w-80 flex-shrink-0 relative hidden lg:block">
-                    <VenueBookingCart
-                      mainCartItems={mainCartItems}
-                      setMainCartItems={setMainCartItems}
-                      selectedCustomer={selectedCustomer}
-                      quotationNames={quotationNames}
-                      toasts={toasts}
-                      addToast={addToast}
-                      removeToast={removeToast}
-                      totalAmountCart={totalAmountCart}
-                      settotalAmountCart={settotalAmountCart}
-                      financialData={financialData}
-                      exbookingEntryName={bookingEntryName}
-                      salesAvailable={salesAvailable}
-                      setQuotationNames={setQuotationNames}
-                      portalMode={portalMode}
-                      fetchData={fetchData}
-                      customerDetails={customerDetails}
-                    />
-                  </div>
-                )}
               </div>
             </main>
           </div>
@@ -986,6 +999,8 @@ function App() {
               fetchData(searchQuery);
               setIsReservationModalOpen(false);
             }}
+            selectedHotelProperty={selectedHotelProperty}
+            canViewAllProperties={canViewAllProperties}
           />
           <Toast messages={toasts} removeToast={removeToast} />
         </div>

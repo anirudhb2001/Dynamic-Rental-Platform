@@ -15,9 +15,17 @@ const ReservationDetails = ({ isOpen, onClose, bookingName, addToast, onExtendCl
   const fetchDetails = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/resource/Booking Entry/${bookingName}`);
+      const [res, paymentRes] = await Promise.all([
+        fetch(`/api/resource/Booking Entry/${bookingName}`),
+        fetch(`/api/resource/Payment Entry?filters=[["custom_booking_entry", "=", "${bookingName}"]]&fields=["name","posting_date","paid_amount","payment_type"]`)
+      ]);
       const data = await res.json();
-      setDetails(data.data);
+      const paymentData = await paymentRes.json();
+      
+      setDetails({
+        ...data.data,
+        payment_entries: paymentData.data || []
+      });
     } catch (err) {
       console.error(err);
       addToast("Failed to load reservation details", "error");
@@ -105,6 +113,26 @@ const ReservationDetails = ({ isOpen, onClose, bookingName, addToast, onExtendCl
                       </div>
                       <div className="font-bold text-slate-800">
                         {ext.amount ? `₹${ext.amount}` : 'N/A'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Payment History */}
+            {details.payment_entries && details.payment_entries.length > 0 && (
+              <div>
+                <h3 className="font-bold text-lg text-slate-800 mb-3">Payment History</h3>
+                <div className="space-y-3">
+                  {details.payment_entries.map((payment, idx) => (
+                    <div key={payment.name || idx} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div>
+                        <p className="font-semibold text-sm text-slate-800">{payment.name}</p>
+                        <p className="text-xs text-slate-500">{payment.posting_date} • {payment.payment_type}</p>
+                      </div>
+                      <div className="font-bold text-emerald-600">
+                        {payment.paid_amount ? `₹${payment.paid_amount.toLocaleString()}` : 'N/A'}
                       </div>
                     </div>
                   ))}

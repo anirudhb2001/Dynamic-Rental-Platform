@@ -25,6 +25,10 @@ function Header({
   handleCustomerLogout,
   customerDetails,
   onNewReservationClick,
+  selectedHotelProperty,
+  setSelectedHotelProperty,
+  availableHotelProperties,
+  canViewAllProperties,
 }) {
   const [isNavbarVisible, setIsNavbarVisible] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -72,7 +76,7 @@ function Header({
     <header className="w-full bg-white shadow-sm sticky top-0 z-50">
       <div className="px-6 py-3 flex items-center justify-between w-full mx-auto">
         {/* Left: Logo and Name */}
-        <div className="flex items-center w-1/4">
+        <div className="flex items-center flex-shrink-0">
           <a href={VITE_PUBLIC_DASHBOARD} className="flex items-center gap-3 text-gray-900 font-bold text-xl tracking-tight no-underline">
             {logo ? (
               <img src={logo} alt={companyName || "Rental Platform"} className="h-8 object-contain rounded-md" />
@@ -103,8 +107,33 @@ function Header({
           </div>
         </div>
 
-        {/* Right: Actions and User */}
-        <div className="flex items-center justify-end gap-6 w-1/4">
+        {/* Right side wrapper to keep things from overlapping */}
+        <div className="flex items-center justify-end gap-4 flex-shrink-0">
+          {/* Property Selector or Display */}
+          {portalMode !== "customer" && (
+            <div className="hidden md:flex items-center">
+            {(canViewAllProperties || availableHotelProperties?.length > 1) ? (
+              <select
+                value={selectedHotelProperty}
+                onChange={(e) => setSelectedHotelProperty(e.target.value)}
+                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary focus:border-primary block w-48 p-2 cursor-pointer font-medium"
+              >
+                {canViewAllProperties && <option value="All Properties">All Properties</option>}
+                {availableHotelProperties?.map((prop) => (
+                  <option key={prop} value={prop}>{prop}</option>
+                ))}
+              </select>
+            ) : availableHotelProperties?.length === 1 ? (
+              <div className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg block p-2 font-medium px-4">
+                <span className="text-gray-500 mr-2">Property:</span>
+                {availableHotelProperties[0]}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+          {/* Actions and User */}
+          <div className="flex items-center gap-4">
           {portalMode !== "customer" && (
             <button
               onClick={onNewReservationClick}
@@ -189,6 +218,7 @@ function Header({
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 

@@ -270,11 +270,39 @@ export const getCustomerLists = async () => {
 
 export const searchCustomers = async (searchTerm) => {
   try {
-    const response = await axios.get(`/api/resource/Customer?fields=["name","customer_name"]&filters=[["customer_name","like","%${searchTerm}%"]]&limit_page_length=50`);
-    return response.data.data;
+    const response = await axios.get(`${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.customer_api.search_customers`, {
+      params: { search_term: searchTerm },
+      withCredentials: true
+    });
+    return response.data.message || [];
   } catch (error) {
     console.error("Error searching customers:", error);
     return [];
+  }
+};
+
+export const checkCustomerPermissions = async () => {
+  try {
+    const response = await axios.get(`${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.customer_api.check_customer_permission`, {
+      withCredentials: true
+    });
+    return response.data.message;
+  } catch (error) {
+    return false;
+  }
+};
+
+export const createCustomer = async (data) => {
+  try {
+    const response = await axios.post(`${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.customer_api.create_reservation_customer`, data, {
+      headers: {
+        "X-Frappe-CSRF-Token": window.csrf_token || ""
+      },
+      withCredentials: true
+    });
+    return response.data.message;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || "Failed to create customer");
   }
 };
 
@@ -807,6 +835,19 @@ export const getBookingEntryItems = async (bookingEntryId) => {
   }
 };
 
+export const getHotelPropertyContext = async () => {
+  try {
+    const response = await axios.get(
+      `${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.permission.get_property_context`,
+      { withCredentials: true }
+    );
+    return response.data.message;
+  } catch (error) {
+    console.error("Error fetching property context:", error);
+    return null;
+  }
+};
+
 export const getBrandingSettings = async () => {
   try {
     const response = await axios.get(`${VITE_AUTHENTICATION}/api/method/rental_platform.web_api.branding.get_branding_settings?_=${new Date().getTime()}`, {
@@ -933,6 +974,44 @@ export const getEventTypes = async () => {
   }
 };
 
+export const logout = async () => {
+  try {
+    const response = await axios.post("/api/method/logout");
+    return response.data;
+  } catch (error) {
+    console.error("Logout failed:", error);
+    throw error;
+  }
+};
+
+export const getSalesOrders = async (hotel_property = null) => {
+  try {
+    const params = {};
+    if (hotel_property) {
+      params.hotel_property = hotel_property;
+    }
+    const response = await axios.get('/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.get_authorized_sales_orders', { params });
+    return response.data.message;
+  } catch (error) {
+    console.error("Error fetching Sales Orders:", error);
+    throw error;
+  }
+};
+
+export const getSalesInvoices = async (hotel_property = null) => {
+  try {
+    const params = {};
+    if (hotel_property) {
+      params.hotel_property = hotel_property;
+    }
+    const response = await axios.get('/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.get_authorized_sales_invoices', { params });
+    return response.data.message;
+  } catch (error) {
+    console.error("Error fetching Sales Invoices:", error);
+    throw error;
+  }
+};
+
 export const getTimeSlots = async () => {
   try {
     const response = await axios.get("/api/resource/Time Slot?limit_page_length=1000");
@@ -1008,16 +1087,13 @@ export const createConsolidatedSalesInvoice = async (booking_name) => {
   }
 };
 
-export const getAllVenueReservations = async () => {
+export const getAllVenueReservations = async (hotelProperty = null) => {
   try {
-    const fields = JSON.stringify([
-      "name", "customer", "venue", "hotel_property", 
-      "event_date", "time_slot", "event_type", "status", "customer_name"
-    ]);
     const response = await axios.get(
-      `/api/resource/Booking Entry?fields=${fields}&limit_page_length=1000`
+      `/api/method/rental_platform.rental_platform.doctype.booking_entry.booking_entry.get_authorized_venue_reservations`,
+      { params: { hotel_property: hotelProperty } }
     );
-    return response.data.data;
+    return response.data.message || [];
   } catch (error) {
     console.error("Error fetching all venue reservations:", error);
     return [];

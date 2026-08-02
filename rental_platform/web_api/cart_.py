@@ -3,9 +3,9 @@ import json
 import random
 from frappe.model.document import Document
 from frappe import _
-from frappe.utils import getdate
-from frappe.utils import now_datetime, get_datetime
-from datetime import datetime
+from frappe.utils import nowdate, getdate, flt
+from datetime import datetime, timedelta
+from rental_platform.web_api.permission import validate_hotel_property_access
 
 # def revert_stock(item_code, qty, stock_qty=1, warehouse="Stores - RAC"):
 #     """
@@ -45,7 +45,9 @@ from datetime import datetime
 
 @frappe.whitelist(allow_guest=True)
 def create_quotation(customer=None, booking_details=None, quantity=0,
-                     custom_rental_from_date=None, custom_rental_to_date=None, custom_actual_to_date=None):
+                     custom_rental_from_date=None, custom_rental_to_date=None, custom_actual_to_date=None, hotel_property=None):
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
     try:
         if not frappe.db.exists("Customer", customer):
             return {"error": f"Customer {customer} not found."}
@@ -86,7 +88,8 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
             "status": "Draft",
             "custom_rental_from_date": custom_rental_from_date,
             "custom_rental_to_date": custom_rental_to_date,
-            "custom_actual_to_date": custom_actual_to_date
+            "custom_actual_to_date": custom_actual_to_date,
+            "custom_hotel_property": hotel_property
         })
 
         all_items = []
@@ -171,58 +174,10 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
             })
         
         total_tax_amount = sum(tax.get('tax_amount', 0) for tax in quotation.taxes)
-        # -----------------------
-        # STOCK DEDUCTION LOGIC
-        # -----------------------
-        # def deduct_stock(item_code, qty, stock_qty=1):
-        #     """
-        #     Deduct stock based on stock_quantity multiplier
-        #     """
-        #     actual_deduction = float(qty) * float(stock_qty)
-            
-        #     # Check if item has stock tracking (Bin record exists)
-        #     bin_exists = frappe.db.exists("Bin", {
-        #         "item_code": item_code, 
-        #         "warehouse": "Stores - RAC"
-        #     })
-            
-        #     if not bin_exists:
-        #         # Item doesn't track stock (likely a bundle/service item)
-        #         return
-            
-        #     current_stock = frappe.db.get_value(
-        #         "Bin",
-        #         {"item_code": item_code, "warehouse": "Stores - RAC"},
-        #         "actual_qty"
-        #     ) or 0
-
-        #     if float(current_stock) < actual_deduction:
-        #         frappe.throw(f"Insufficient stock for Item {item_code}. Available: {current_stock}, Required: {actual_deduction}")
-
-        #     new_qty = float(current_stock) - actual_deduction
-
-        #     frappe.db.set_value(
-        #         "Bin",
-        #         {"item_code": item_code, "warehouse": "Stores - RAC"},
-        #         "actual_qty",
-        #         new_qty
-        #     )
-
-        # # Deduct stock for ALL items (both main and sub-items)
-        # # Stock will only be deducted for items that have Bin records
-        # for it in quotation.custom_rental_items:
-        #     stock_qty = it.get('stock_quantity', 1)
-        #     deduct_stock(it.rental_item_id, it.quantity, stock_qty)
-
+        
         try:
             quotation.save(ignore_permissions=True)
             frappe.db.commit()
-            # return {
-            #     "quotation_name": quotation.name,
-            #     "custom_rental_items": all_items,
-            #     "total": total_amount,
-            #     "tax": total_tax_amount
-            # }
             return {
                 "quotation_name": quotation.name,
                 "custom_rental_items": [
@@ -250,15 +205,21 @@ def create_quotation(customer=None, booking_details=None, quantity=0,
 
 
 @frappe.whitelist(allow_guest=True)
-def get_customer_draft_quotations(customer_name):
+def get_customer_draft_quotations(customer_name, hotel_property=None):
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
     if not customer_name:
         return {"error": "Customer name is required."}
     if not frappe.db.exists("Customer", customer_name):
         return {"error": f"Customer '{customer_name}' does not exist."}
 
+    filters = {"party_name": customer_name, "status": "Draft"}
+    if hotel_property:
+        filters["custom_hotel_property"] = hotel_property
+
     quotations = frappe.get_all(
         "Quotation",
-        filters={"party_name": customer_name, "status": "Draft"},
+        filters=filters,
         fields=["name", "transaction_date", "total", "status", "custom_rental_from_date", "custom_rental_to_date", "custom_actual_to_date"],
         order_by="transaction_date desc"
     )
@@ -296,7 +257,7 @@ def get_customer_draft_quotations(customer_name):
                     
                     bundle_price = frappe.get_value(
                         "Item Price",
-                        {"item_code": parent_bundle, "price_list": item["pricelist_name"]},  # Change 'pricelist' to 'price_list'
+                        {"item_code": parent_bundle, "price_list": item["pricelist_name"]},
                         "price_list_rate"
                     )
 
@@ -310,7 +271,7 @@ def get_customer_draft_quotations(customer_name):
                         "amount": (bundle_price if bundle_price else 0) * item["quantity"],
                         "brand": bundle_details.get("brand") if bundle_details else None,
                         "image": bundle_details.get("image") if bundle_details else None,
-                        "subitems": []  # Initialize subitems here
+                        "subitems": []
                     })
                     processed_items.add(parent_bundle)
 
@@ -359,7 +320,17 @@ def get_customer_draft_quotations(customer_name):
 
 
 @frappe.whitelist(allow_guest=True)
-def submit_quotation_without_booking(quotation_name):
+def check_venue_availability(venue, from_date, to_date, hotel_property=None):
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
+    # Placeholder implementation
+    return {"available": True}
+
+
+@frappe.whitelist(allow_guest=True)
+def submit_quotation_without_booking(quotation_name, hotel_property=None):
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
     try:
         if not frappe.db.exists("Quotation", quotation_name):
             return {"error": f"Quotation '{quotation_name}' does not exist."}

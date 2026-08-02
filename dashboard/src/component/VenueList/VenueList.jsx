@@ -125,7 +125,10 @@ const VenueList = ({ addToast, fetchData }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center justify-end font-semibold text-slate-700">
+                    <div className="text-xl font-bold text-primary mb-1">
+                      {venue.default_venue_rate ? `₹ ${venue.default_venue_rate.toLocaleString()} / day` : 'Rate on request'}
+                    </div>
+                    <div className="flex items-center justify-end font-semibold text-slate-500 text-sm">
                       <LuMaximize className="mr-1.5 text-slate-400" />
                       {venue.venue_size} {venue.venue_size_unit}
                     </div>

@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
-import "react-big-calendar/lib/css/react-big-calendar.css";
 import ReservationModal from "./ReservationModal";
 import ReservationExtensionModal from "./ReservationExtensionModal";
 import ReservationDetails from "./ReservationDetails";
-import { getHotelProperties, getAllVenueReservations } from "../../services/api";
+import { getHotelProperties, getAllVenueReservations, getVenues } from "../../services/api";
 
-const localizer = momentLocalizer(moment);
-
-const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => {
+const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings, selectedHotelProperty, canViewAllProperties }) => {
   const [hotelProperties, setHotelProperties] = useState([]);
-  const [filterHotel, setFilterHotel] = useState("");
-  const [events, setEvents] = useState([]);
+  const [venues, setVenues] = useState([]);
+  const [calendarBookings, setCalendarBookings] = useState([]);
+  
+  // Bedboard View State
+  const [startDate, setStartDate] = useState(moment().startOf("day"));
+  const [daysToShow, setDaysToShow] = useState(7);
   
   // Modals state
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isExtModalOpen, setIsExtModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
+  // Selected Data for Modals
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedVenue, setSelectedVenue] = useState("");
   const [selectedBooking, setSelectedBooking] = useState(null);
 
   useEffect(() => {
@@ -34,70 +36,67 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
     fetchHotels();
   }, []);
 
-  const [calendarBookings, setCalendarBookings] = useState([]);
-
-  const fetchCalendarBookings = async () => {
+  const fetchCalendarData = async () => {
     try {
-      const data = await getAllVenueReservations();
-      setCalendarBookings(data || []);
+      const [bookingsData, venuesData] = await Promise.all([
+        getAllVenueReservations(selectedHotelProperty),
+        getVenues(selectedHotelProperty || null)
+      ]);
+      setCalendarBookings(bookingsData || []);
+      setVenues(venuesData || []);
     } catch (err) {
-      console.error("Failed to load venue reservations for calendar", err);
+      console.error("Failed to load calendar data", err);
     }
   };
 
   useEffect(() => {
-    fetchCalendarBookings();
-  }, []);
+    fetchCalendarData();
+  }, [selectedHotelProperty]); // Refetch when global hotel filter changes
 
-  useEffect(() => {
-    if (calendarBookings && Array.isArray(calendarBookings)) {
-      const calendarEvents = [];
+  // Filter bookings by hotel (in memory just to be safe)
+  const filteredBookings = selectedHotelProperty && selectedHotelProperty !== "All Properties"
+    ? calendarBookings.filter(b => b.hotel_property === selectedHotelProperty)
+    : calendarBookings;
+
+  // Generate Date Columns
+  const dates = Array.from({ length: daysToShow }).map((_, i) => moment(startDate).add(i, "days"));
+
+  // Helper to find bookings for a specific cell
+  const getBookingsForCell = (venueName, dateStr) => {
+    const matched = [];
+    filteredBookings.forEach(booking => {
+      if (booking.venue !== venueName) return;
       
-      const filteredData = filterHotel 
-        ? calendarBookings.filter(b => b.hotel_property === filterHotel)
-        : calendarBookings;
-        
-      filteredData.forEach((booking) => {
-        // Original Reservation Event
-        const startDate = moment(booking.event_date || booking.date).toDate();
-        const endDate = moment(startDate).add(1, "hours").toDate();
-        
-        calendarEvents.push({
-          title: `${booking.venue || "Venue"} | ${booking.event_type || "Event"} | ${booking.customer_name || booking.customer_data || booking.customer} | ${booking.time_slot}`,
-          start: startDate,
-          end: endDate,
-          resource: booking,
+      const bDate = moment(booking.event_date || booking.date).format("YYYY-MM-DD");
+      if (bDate === dateStr) {
+        matched.push({ ...booking, isExtension: false });
+      }
+      
+      // Extensions
+      if (booking.reservation_extensions && Array.isArray(booking.reservation_extensions)) {
+        booking.reservation_extensions.forEach(ext => {
+          if (ext.status !== 'Cancelled' && moment(ext.extension_date).format("YYYY-MM-DD") === dateStr) {
+            matched.push({ ...booking, ...ext, isExtension: true, originalBooking: booking });
+          }
         });
-        
-        // If the booking object happens to include extensions (e.g. joined data)
-        if (booking.reservation_extensions && Array.isArray(booking.reservation_extensions)) {
-          booking.reservation_extensions.forEach(ext => {
-            if (ext.status !== 'Cancelled') {
-              const extStart = moment(ext.extension_date).toDate();
-              const extEnd = moment(extStart).add(1, "hours").toDate();
-              calendarEvents.push({
-                title: `${booking.venue} | Extension | ${booking.customer_name || booking.customer} | ${ext.time_slot}`,
-                start: extStart,
-                end: extEnd,
-                resource: booking, // pass original booking for reference
-              });
-            }
-          });
-        }
-      });
-      setEvents(calendarEvents);
-    }
-  }, [calendarBookings, filterHotel]);
-
-  const handleSelectEvent = (event) => {
-    setSelectedBooking(event.resource);
-    setIsDetailsModalOpen(true);
+      }
+    });
+    return matched;
   };
 
-  const handleSelectSlot = (slotInfo) => {
-    const formattedDate = moment(slotInfo.start).format('YYYY-MM-DD');
-    setSelectedDate(formattedDate);
+  const handleNextDate = () => setStartDate(moment(startDate).add(daysToShow, "days"));
+  const handlePrevDate = () => setStartDate(moment(startDate).subtract(daysToShow, "days"));
+  const handleToday = () => setStartDate(moment().startOf("day"));
+
+  const openNewReservation = (dateStr = null, venueName = "") => {
+    setSelectedDate(dateStr);
+    setSelectedVenue(venueName);
     setIsNewModalOpen(true);
+  };
+
+  const openDetails = (booking) => {
+    setSelectedBooking(booking.isExtension ? booking.originalBooking : booking);
+    setIsDetailsModalOpen(true);
   };
 
   const handleExtendClick = (bookingDetails) => {
@@ -105,24 +104,60 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
     setIsExtModalOpen(true);
   };
 
+  // Status styling
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Reserved": return "bg-emerald-500 text-white border-emerald-600";
+      case "Completed": return "bg-indigo-500 text-white border-indigo-600";
+      case "Cancelled": return "bg-rose-500 text-white border-rose-600";
+      default: return "bg-blue-500 text-white border-blue-600";
+    }
+  };
+
   return (
     <div className="w-full flex flex-col h-[calc(100vh-6rem)] rounded-3xl bg-white/45 p-5 backdrop-blur-xl">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-black text-slate-800">Availability Calendar</h2>
-        <div className="flex items-center gap-4">
-          <select 
-            value={filterHotel} 
-            onChange={(e) => setFilterHotel(e.target.value)}
-            className="p-2.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none min-w-[200px]"
-          >
-            <option value="">All Properties</option>
-            {hotelProperties.map(h => (
-              <option key={h.name} value={h.name}>{h.hotel_name || h.name}</option>
-            ))}
-          </select>
+      {/* Header & Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800">Bedboard Timeline</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">
+            {startDate.format("MMMM YYYY")}
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Navigation Controls */}
+          <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+            <button onClick={handlePrevDate} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button onClick={handleToday} className="px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+              Today
+            </button>
+            <button onClick={handleNextDate} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+            <button 
+              onClick={() => setDaysToShow(7)} 
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${daysToShow === 7 ? 'bg-primary text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              7 Days
+            </button>
+            <button 
+              onClick={() => setDaysToShow(14)} 
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${daysToShow === 14 ? 'bg-primary text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              14 Days
+            </button>
+          </div>
+          
           <button 
-            onClick={() => { setSelectedDate(null); setIsNewModalOpen(true); }}
-            className="px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md transition-all flex items-center gap-2"
+            onClick={() => openNewReservation(null, "")}
+            className="px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md transition-all flex items-center gap-2 text-sm"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             New Reservation
@@ -130,51 +165,105 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 overflow-hidden">
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: "100%" }}
-          onSelectEvent={handleSelectEvent}
-          selectable={true}
-          onSelectSlot={handleSelectSlot}
-          views={["month", "week", "day"]}
-          popup={true}
-          eventPropGetter={(event) => {
-            let backgroundColor = "#3b82f6"; // default blue
-            if (event.resource?.status === "Reserved") backgroundColor = "#10b981"; // green
-            if (event.resource?.status === "Cancelled") backgroundColor = "#ef4444"; // red
-            if (event.resource?.status === "Completed") backgroundColor = "#6366f1"; // indigo
-            
-            return {
-              style: {
-                backgroundColor,
-                borderRadius: "6px",
-                opacity: 0.9,
-                color: "white",
-                border: "none",
-                display: "block",
-                padding: "2px 5px",
-                fontWeight: "500",
-                fontSize: "12px",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
-              }
-            };
-          }}
-        />
+      {/* Bedboard Matrix */}
+      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+        {/* Header Row (Dates) */}
+        <div className="flex border-b border-slate-200 bg-slate-50/80">
+          <div className="w-48 shrink-0 border-r border-slate-200 p-4 flex items-center justify-center font-bold text-slate-500 uppercase text-xs tracking-wider">
+            Venues
+          </div>
+          <div className="flex-1 flex min-w-max">
+            {dates.map((d, i) => (
+              <div key={i} className="flex-1 min-w-[120px] p-3 border-r border-slate-200 last:border-r-0 flex flex-col items-center justify-center text-center">
+                <span className={`text-xs font-bold uppercase ${d.isSame(moment(), 'day') ? 'text-primary' : 'text-slate-500'}`}>
+                  {d.format('ddd')}
+                </span>
+                <span className={`text-xl font-black mt-0.5 ${d.isSame(moment(), 'day') ? 'text-primary' : 'text-slate-800'}`}>
+                  {d.format('DD')}
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400">
+                  {d.format('MMM')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Matrix Body (Venues & Cells) */}
+        <div className="flex-1 overflow-auto flex flex-col relative">
+          {venues.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-slate-400 font-medium">
+              No venues found for the selected property.
+            </div>
+          ) : (
+            venues.map((venue) => (
+              <div key={venue.name} className="flex min-h-[100px] border-b border-slate-100 group hover:bg-slate-50/50 transition-colors">
+                {/* Venue Label */}
+                <div className="w-48 shrink-0 border-r border-slate-200 p-4 flex flex-col justify-center bg-white group-hover:bg-transparent transition-colors z-10 sticky left-0 shadow-[1px_0_2px_rgba(0,0,0,0.02)]">
+                  <h3 className="font-bold text-slate-800 text-sm">{venue.venue_name || venue.name}</h3>
+                  <p className="text-xs text-slate-500 mt-1 truncate">{venue.hotel_property}</p>
+                </div>
+
+                {/* Cells */}
+                <div className="flex-1 flex min-w-max">
+                  {dates.map((d, i) => {
+                    const dateStr = d.format("YYYY-MM-DD");
+                    const cellBookings = getBookingsForCell(venue.name, dateStr);
+                    
+                    return (
+                      <div 
+                        key={i} 
+                        onClick={(e) => {
+                          // Only trigger empty cell click if we didn't click a booking block
+                          if (e.target === e.currentTarget) {
+                            openNewReservation(dateStr, venue.name);
+                          }
+                        }}
+                        className="flex-1 min-w-[120px] border-r border-slate-100 last:border-r-0 p-1.5 flex flex-col gap-1.5 cursor-pointer hover:bg-slate-100/50 transition-colors relative"
+                        title="Click to add reservation"
+                      >
+                        {cellBookings.map((bk, bIdx) => (
+                          <div
+                            key={bIdx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDetails(bk);
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border shadow-sm cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all ${getStatusColor(bk.status)}`}
+                          >
+                            <div className="text-[10px] font-bold uppercase tracking-wider opacity-90 mb-0.5">
+                              {bk.time_slot} {bk.isExtension && "(Ext)"}
+                            </div>
+                            <div className="text-xs font-bold truncate">
+                              {bk.customer_name || bk.customer_data || bk.customer}
+                            </div>
+                            <div className="text-[10px] opacity-80 truncate mt-0.5">
+                              {bk.event_type}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <ReservationModal 
         isOpen={isNewModalOpen} 
-        onClose={() => setIsNewModalOpen(false)} 
+        onClose={() => { setIsNewModalOpen(false); setSelectedVenue(""); }} 
         initialDate={selectedDate}
+        initialVenue={selectedVenue}
         addToast={addToast}
         onReservationCreated={() => {
-          fetchCalendarBookings();
+          fetchCalendarData();
           if (refreshBookings) refreshBookings();
         }}
+        selectedHotelProperty={selectedHotelProperty}
+        canViewAllProperties={canViewAllProperties}
       />
 
       <ReservationExtensionModal
@@ -183,7 +272,7 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
         originalBooking={selectedBooking}
         addToast={addToast}
         onExtensionCreated={() => {
-          fetchCalendarBookings();
+          fetchCalendarData();
           if (refreshBookings) refreshBookings();
         }}
       />
@@ -191,11 +280,11 @@ const AvailabilityCalendar = ({ addToast, allBookingData, refreshBookings }) => 
       <ReservationDetails
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
-        bookingName={selectedBooking ? selectedBooking.name : null}
+        bookingName={selectedBooking ? (selectedBooking.name || selectedBooking.originalBooking?.name) : null}
         addToast={addToast}
         onExtendClick={handleExtendClick}
         onInvoiceCreated={() => {
-          fetchCalendarBookings();
+          fetchCalendarData();
           if (refreshBookings) refreshBookings();
         }}
       />

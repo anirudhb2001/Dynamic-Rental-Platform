@@ -1,9 +1,10 @@
 import frappe
 from frappe import _
 from datetime import datetime, timedelta
+from rental_platform.web_api.permission import get_sql_match_conditions
 
 @frappe.whitelist(allow_guest=True)
-def get_booking_entries_with_financial_details(customer=None, return_status=None, from_date=None, to_date=None):
+def get_booking_entries_with_financial_details(customer=None, return_status=None, from_date=None, to_date=None, status=None):
     today = datetime.now().date()
     tomorrow = today + timedelta(days=1)
 
@@ -26,7 +27,20 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
         conditions.append("be.rental_from_date <= %s")
         params.append(to_date)
 
-    where_clause = " AND ".join(conditions)
+    if status:
+        if isinstance(status, list):
+            conditions.append(f"be.status IN ({', '.join(['%s'] * len(status))})")
+            params.extend(status)
+        else:
+            conditions.append("be.status = %s")
+            params.append(status)
+            
+    # Property isolation
+    match_cond = get_sql_match_conditions("Booking Entry", alias="be")
+    if match_cond:
+        conditions.append(match_cond)
+            
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
 
     query = f"""
         SELECT
@@ -121,6 +135,34 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
         )
         item_brands = {item['name']: item.get('brand', 'No Brand') for item in items_data}
 
+    # BATCH FETCH: Get all sales orders in one query to calculate total amount
+    sales_orders_by_booking = {}
+    if booking_entry_names:
+        all_sos = frappe.get_all(
+            "Sales Order",
+            filters={"custom_booking_entry": ["in", booking_entry_names], "docstatus": 1},
+            fields=["name", "custom_booking_entry", "grand_total"]
+        )
+        for so in all_sos:
+            b_entry = so.pop("custom_booking_entry")
+            if b_entry not in sales_orders_by_booking:
+                sales_orders_by_booking[b_entry] = []
+            sales_orders_by_booking[b_entry].append(so)
+
+    # BATCH FETCH: Get all payment entries in one query
+    payment_entries_by_booking = {}
+    if booking_entry_names:
+        all_payments = frappe.get_all(
+            "Payment Entry",
+            filters={"custom_booking_entry": ["in", booking_entry_names], "docstatus": 1},
+            fields=["name", "custom_booking_entry", "posting_date", "paid_amount", "payment_type"]
+        )
+        for pe in all_payments:
+            b_entry = pe.pop("custom_booking_entry")
+            if b_entry not in payment_entries_by_booking:
+                payment_entries_by_booking[b_entry] = []
+            payment_entries_by_booking[b_entry].append(pe)
+
     booking_data = {}
     for row in results:
         booking_entry = row['booking_entry']
@@ -189,6 +231,7 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
                 'return_status': row['return_status'],
                 'date_status': date_status,
                 'sales_invoices': [],
+                'payment_entries': payment_entries_by_booking.get(booking_entry, []),
                 'rental_items': rental_items,
                 'total_agreement_amount': 0.0,
                 'amount_received': 0.0,
@@ -196,6 +239,14 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
                 'payment_status': 'Pending',
                 'security_document_status': row.get('security_document_status')
             }
+
+            # Calculate total agreement amount from all linked Sales Orders
+            total_so_amount = sum([so.get('grand_total', 0.0) for so in sales_orders_by_booking.get(booking_entry, [])])
+            booking_data[booking_entry]['total_agreement_amount'] = total_so_amount
+
+            # Add payment amounts to amount_received
+            for pe in payment_entries_by_booking.get(booking_entry, []):
+                booking_data[booking_entry]['amount_received'] += pe.get('paid_amount', 0.0)
 
         if row['sales_invoice']:
             booking_data[booking_entry]['sales_invoices'].append({
@@ -205,13 +256,6 @@ def get_booking_entries_with_financial_details(customer=None, return_status=None
                 'invoice_outstanding': row['invoice_outstanding'],
                 'invoice_status': row['invoice_status']
             })
-
-            invoice_amount = row['invoice_amount'] or 0.0
-            outstanding_amount = row['invoice_outstanding'] or 0.0
-            amount_received = invoice_amount - outstanding_amount
-
-            booking_data[booking_entry]['total_agreement_amount'] += invoice_amount
-            booking_data[booking_entry]['amount_received'] += amount_received
 
     for entry in booking_data.values():
         entry['pending_amount'] = entry['total_agreement_amount'] - entry['amount_received']
@@ -248,13 +292,18 @@ def get_operational_dashboard_summary(hotel_property=None):
         
         # 1. Fetch relevant booking entries
         conditions = ["be.status NOT IN ('Cancelled')"]
-        params = {}
+        params = []
         
         if hotel_property and hotel_property != "All Properties":
-            conditions.append("be.hotel_property = %(hotel_property)s")
-            params['hotel_property'] = hotel_property
+            conditions.append("be.hotel_property = %s")
+            params.append(hotel_property)
             
-        where_clause = " AND ".join(conditions)
+        # Property isolation
+        match_cond = get_sql_match_conditions("Booking Entry", alias="be")
+        if match_cond:
+            conditions.append(match_cond)
+            
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
         
         # We need custom_booking_entry on Sales Invoice. 
         # But for performance and since some bookings might not have invoices yet, 
@@ -309,6 +358,7 @@ def get_operational_dashboard_summary(hotel_property=None):
         if has_venue_status:
             fields.append("venue_status")
             
+        # Natively secured because frappe.get_all will apply User Permissions to Item.hotel_property
         venues = frappe.get_all("Item", filters=venue_conditions, fields=fields)
         
         venue_availability = []
@@ -339,28 +389,42 @@ def get_operational_dashboard_summary(hotel_property=None):
             })
             
         # 3. Payment Overview
-        si_query = f"""
-            SELECT
-                SUM(si.grand_total) as total_booking_value,
-                SUM(si.outstanding_amount) as outstanding_amount
-            FROM
-                `tabSales Invoice` si
-            INNER JOIN
-                `tabBooking Entry` be ON si.custom_booking_entry = be.name
-            WHERE
-                {where_clause} AND si.docstatus = 1
+        so_query = f"""
+            SELECT SUM(so.grand_total) as total_booking_value
+            FROM `tabSales Order` so
+            INNER JOIN `tabBooking Entry` be ON so.custom_booking_entry = be.name
+            WHERE {where_clause} AND so.docstatus = 1
         """
-        si_totals = frappe.db.sql(si_query, params, as_dict=True)[0]
-        
-        total_booking_value = si_totals.get("total_booking_value") or 0.0
-        outstanding_amount = si_totals.get("outstanding_amount") or 0.0
-        advance_received = total_booking_value - outstanding_amount
+        so_totals = frappe.db.sql(so_query, params, as_dict=True)[0]
+        total_booking_value = so_totals.get("total_booking_value") or 0.0
+
+        pe_query = f"""
+            SELECT SUM(pe.paid_amount) as advance_received
+            FROM `tabPayment Entry` pe
+            INNER JOIN `tabBooking Entry` be ON pe.custom_booking_entry = be.name
+            WHERE {where_clause} AND pe.docstatus = 1
+        """
+        pe_totals = frappe.db.sql(pe_query, params, as_dict=True)[0]
+        advance_received = pe_totals.get("advance_received") or 0.0
+
+        outstanding_amount = total_booking_value - advance_received
+        if outstanding_amount < 0:
+            outstanding_amount = 0.0
         
         pending_payments_count = frappe.db.sql(f"""
             SELECT COUNT(DISTINCT be.name)
             FROM `tabBooking Entry` be
-            INNER JOIN `tabSales Invoice` si ON si.custom_booking_entry = be.name
-            WHERE {where_clause} AND si.docstatus = 1 AND si.outstanding_amount > 0
+            INNER JOIN `tabSales Order` so ON so.custom_booking_entry = be.name
+            WHERE {where_clause} AND so.docstatus = 1
+            AND (
+                SELECT COALESCE(SUM(so2.grand_total), 0)
+                FROM `tabSales Order` so2
+                WHERE so2.custom_booking_entry = be.name AND so2.docstatus = 1
+            ) > (
+                SELECT COALESCE(SUM(pe.paid_amount), 0)
+                FROM `tabPayment Entry` pe
+                WHERE pe.custom_booking_entry = be.name AND pe.docstatus = 1
+            )
         """, params)[0][0]
         
         # Get total time slots available

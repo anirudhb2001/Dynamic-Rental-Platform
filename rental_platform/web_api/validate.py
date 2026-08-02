@@ -14,16 +14,8 @@ def warehouse_validate(doc, method=None):
             frappe.throw(f'Customer Warehouse Already Exists for company {doc.company}')
 
 def sales_invoice_validate(doc, method=None):
-    has_rental_services = any(
-    item.item_name == "Rental Services"
-    for item in (doc.items or [])
-)
-
-    if has_rental_services:
-        return
-
-    if not frappe.db.exists('Warehouse', {'custom_is_customer_warehouse': 1}):
-        frappe.throw('Customer Warehouse must be set before proceeding')
+    # This validation is no longer required for Hotel & Venue ERP
+    return
         
 @frappe.whitelist(allow_guest=True)
 def item_qty_in_warehouse(item_code=None, warehouse=None):
@@ -77,7 +69,14 @@ def validate_item_warehouse(item_code=None, warehouse=None):
 
 
 def validate_customer_verification(doc, method=None):
-    if not doc.custom_customer_verified:
+    if doc.is_new():
+        return
+        
+    roles = frappe.get_roles()
+    if "System Manager" in roles or "Hotel Manager" in roles or "Hotel Reservation Staff" in roles:
+        return
+        
+    if not doc.get("custom_customer_verified"):
         frappe.throw("Customer must be verified before proceeding")
 
 def validate_portal_approval_status(doc, method=None):

@@ -30,9 +30,9 @@ frappe.ui.form.on("Booking Entry", {
       return;
     }
     
-    frm.add_custom_button(__("Mark Early Return"), () => {
-      show_early_return_dialog(frm);
-    }).addClass("btn-warning");
+    // frm.add_custom_button(__("Mark Early Return"), () => {
+    //   show_early_return_dialog(frm);
+    // }).addClass("btn-warning");
 
     // Show button only when the status is 'Reserved'
     if (frm.doc.status === "Reserved") {
@@ -68,34 +68,34 @@ frappe.ui.form.on("Booking Entry", {
         .addClass("btn-dark");
 
       // Mark as Rented Button
-      frm.add_custom_button(__("Mark as Rented"), function () {
-        frappe.confirm(
-          __("This will transfer stock to the customer warehouse. Continue?"),
-          function () {
-            frappe.call({
-              method:
-                "rental_platform.rental_platform.doctype.booking_entry.booking_entry.make_stock_entry_for_rental",
-              args: {
-                booking_id: frm.doc.name,
-              },
-              freeze: true,
-              freeze_message: __("Processing..."),
-              callback: function (response) {
-                if (response.message) {
-                  frappe.msgprint(
-                    __("Booking {0} is now Rented. Stock Transferred.", [
-                      frm.doc.name,
-                    ])
-                  );
-                  frm.reload_doc();
-                } else {
-                  frappe.msgprint(__("Error updating status."));
-                }
-              },
-            });
-          }
-        );
-      }).addClass("btn-primary");
+      // frm.add_custom_button(__("Mark as Rented"), function () {
+      //   frappe.confirm(
+      //     __("This will transfer stock to the customer warehouse. Continue?"),
+      //     function () {
+      //       frappe.call({
+      //         method:
+      //           "rental_platform.rental_platform.doctype.booking_entry.booking_entry.make_stock_entry_for_rental",
+      //         args: {
+      //           booking_id: frm.doc.name,
+      //         },
+      //         freeze: true,
+      //         freeze_message: __("Processing..."),
+      //         callback: function (response) {
+      //           if (response.message) {
+      //             frappe.msgprint(
+      //               __("Booking {0} is now Rented. Stock Transferred.", [
+      //                 frm.doc.name,
+      //               ])
+      //             );
+      //             frm.reload_doc();
+      //           } else {
+      //             frappe.msgprint(__("Error updating status."));
+      //           }
+      //         },
+      //       });
+      //     }
+      //   );
+      // }).addClass("btn-primary");
     }
   },
 });
@@ -164,5 +164,4 @@ function show_early_return_dialog(frm) {
         },
     });
     d.show();
-}
-
+  }

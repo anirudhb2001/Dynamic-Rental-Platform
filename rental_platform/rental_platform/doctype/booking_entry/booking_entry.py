@@ -92,16 +92,35 @@ class BookingEntry(Document):
 
 @frappe.whitelist()
 def check_venue_availability(venue, event_date, time_slot, exclude_booking_name=None):
+    # Verify access to the venue's property
+    venue_property = frappe.db.get_value("Item", venue, "hotel_property")
+    if venue_property:
+        from rental_platform.web_api.permission import validate_hotel_property_access
+        validate_hotel_property_access(venue_property)
+        
     existing = check_venue_availability_logic(venue, event_date, time_slot, exclude_booking_name)
     if existing:
         return {"available": False, "conflicting_booking": existing}
     return {"available": True}
 
 @frappe.whitelist()
-def create_venue_reservation(customer, venue, event_type, event_date, time_slot, hotel_property=None, seating_type=None, guest_count=0, special_instructions=""):
+def create_venue_reservation(customer, venue, event_type, event_date, time_slot, hotel_property=None, seating_type=None, guest_count=0, special_instructions="", agreed_amount=None):
     # 1. Validation
     if not customer or not venue or not event_date or not time_slot or not event_type:
         frappe.throw(_("Customer, Venue, Event Type, Event Date, and Time Slot are required."))
+        
+    # 2. Strict Property Validation
+    from rental_platform.web_api.permission import validate_hotel_property_access
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
+        
+    venue_property = frappe.db.get_value("Item", venue, "hotel_property")
+    if hotel_property and venue_property != hotel_property:
+        frappe.throw(_("Venue {0} does not belong to Hotel Property {1}").format(venue, hotel_property), frappe.PermissionError)
+        
+    if not hotel_property and venue_property:
+        validate_hotel_property_access(venue_property)
+        hotel_property = venue_property
         
     # Check availability
     conflict = check_venue_availability_logic(venue, event_date, time_slot)
@@ -109,24 +128,51 @@ def create_venue_reservation(customer, venue, event_type, event_date, time_slot,
         frappe.throw(_("Venue {0} is already booked on {1} for the selected time slot (Booking: {2}).").format(venue, event_date, conflict))
         
     try:
+        # Get Item Pricing Details
+        default_venue_rate = frappe.db.get_value("Item", venue, "default_venue_rate") or 0.0
+        
+        # Determine actual negotiated amount
+        if agreed_amount is not None and agreed_amount != "":
+            try:
+                agreed_amount = float(agreed_amount)
+            except ValueError:
+                agreed_amount = default_venue_rate
+        else:
+            agreed_amount = default_venue_rate
+            
+        if agreed_amount <= 0:
+            frappe.throw(_("Reservation amount must be greater than zero."))
+
         # Create Sales Order
         default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company") or frappe.db.get_value("Company", {}, "name")
-        item_price = frappe.db.get_value("Item Price", {"item_code": venue, "price_list": "Standard Selling"}, "price_list_rate") or 0.0
 
-        so = frappe.new_doc("Sales Order")
-        so.company = default_company
-        so.customer = customer
-        so.delivery_date = event_date
-        so.append("items", {
-            "item_code": venue,
-            "qty": 1,
-            "rate": item_price,
-            "delivery_date": event_date
-        })
-        so.run_method("set_missing_values")
-        so.run_method("calculate_taxes_and_totals")
-        so.insert(ignore_permissions=True)
-        so.submit()
+        # Bypass permissions for background Sales Order creation
+        # to prevent Customer read access errors for Area Managers
+        original_user = frappe.session.user
+        try:
+            frappe.set_user("Administrator")
+            frappe.flags.ignore_permissions = True
+            
+            so = frappe.new_doc("Sales Order")
+            so.company = default_company
+            so.customer = customer
+            so.delivery_date = event_date
+            so.append("items", {
+                "item_code": venue,
+                "qty": 1,
+                "rate": agreed_amount,
+                "amount": agreed_amount,
+                "delivery_date": event_date
+            })
+            
+            so.run_method("set_missing_values")
+            so.run_method("calculate_taxes_and_totals")
+            so.insert(ignore_permissions=True)
+            so.submit()
+            
+        finally:
+            frappe.set_user(original_user)
+            frappe.flags.ignore_permissions = False
 
         # Create Booking Entry
         be = frappe.new_doc("Booking Entry")
@@ -143,6 +189,8 @@ def create_venue_reservation(customer, venue, event_type, event_date, time_slot,
         be.special_instructions = special_instructions
         be.status = "Reserved"
         be.sales_order = so.name
+        be.venue_default_rate = default_venue_rate
+        be.reservation_amount = agreed_amount
         
         be.insert(ignore_permissions=True)
         be.submit()
@@ -162,12 +210,22 @@ def extend_venue_reservation(booking_name, extension_date, time_slot, amount=Non
     try:
         be = frappe.get_doc("Booking Entry", booking_name)
         
+        # Verify Property Access
+        if be.hotel_property:
+            from rental_platform.web_api.permission import validate_hotel_property_access
+            validate_hotel_property_access(be.hotel_property)
+
+        
         conflict = check_venue_availability_logic(be.venue, extension_date, time_slot, booking_name)
         if conflict:
             frappe.throw(_("Venue {0} is already booked on {1} for the selected time slot (Booking: {2}).").format(be.venue, extension_date, conflict))
             
         default_company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company") or frappe.db.get_value("Company", {}, "name")
-        item_price = amount if amount is not None else (frappe.db.get_value("Item Price", {"item_code": be.venue, "price_list": "Standard Selling"}, "price_list_rate") or 0.0)
+        
+        if amount is not None:
+            agreed_amount = float(amount)
+        else:
+            agreed_amount = be.reservation_amount if be.reservation_amount else (be.venue_default_rate or frappe.db.get_value("Item Price", {"item_code": be.venue, "price_list": "Standard Selling"}, "price_list_rate") or 0.0)
 
         so = frappe.new_doc("Sales Order")
         so.company = default_company
@@ -176,8 +234,8 @@ def extend_venue_reservation(booking_name, extension_date, time_slot, amount=Non
         so.append("items", {
             "item_code": be.venue,
             "qty": 1,
-            "rate": item_price,
-            "amount": item_price,
+            "rate": agreed_amount,
+            "amount": agreed_amount,
             "delivery_date": extension_date
         })
         so.run_method("set_missing_values")
@@ -207,16 +265,110 @@ def extend_venue_reservation(booking_name, extension_date, time_slot, amount=Non
 
 @frappe.whitelist()
 def get_venues(hotel_property=None):
+    from rental_platform.web_api.permission import validate_hotel_property_access, get_user_hotel_properties
+    
+    if hotel_property == "All Properties":
+        hotel_property = None
+        
     filters = {"is_venue": 1}
     if hotel_property:
+        validate_hotel_property_access(hotel_property)
         filters["hotel_property"] = hotel_property
+    else:
+        permitted = get_user_hotel_properties()
+        if not permitted and "System Manager" not in frappe.get_roles():
+            return []
+        if permitted:
+            filters["hotel_property"] = ["in", permitted]
+
         
-    venues = frappe.get_all("Item", filters=filters, fields=["name", "item_name", "hotel_property", "venue_size", "venue_size_unit", "venue_description", "venue_image", "venue_status", "venue_capacity"])
+    venues = frappe.get_all("Item", filters=filters, fields=["name", "item_name", "hotel_property", "venue_size", "venue_size_unit", "venue_description", "venue_image", "venue_status", "venue_capacity", "default_venue_rate"])
     
     for v in venues:
         v["seating_capacities"] = frappe.get_all("Venue Seating Capacity", filters={"parent": v.name}, fields=["seating_type", "capacity"])
         
     return venues
+
+@frappe.whitelist()
+def get_authorized_venue_reservations(hotel_property=None):
+    from rental_platform.web_api.permission import validate_hotel_property_access, get_user_hotel_properties
+    
+    if hotel_property == "All Properties":
+        hotel_property = None
+        
+    filters = {}
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
+        filters["hotel_property"] = hotel_property
+    else:
+        permitted = get_user_hotel_properties()
+        if not permitted and "System Manager" not in frappe.get_roles():
+            return []
+        if permitted:
+            filters["hotel_property"] = ["in", permitted]
+            
+    return frappe.get_all(
+        "Booking Entry",
+        filters=filters,
+        fields=["name", "customer", "venue", "hotel_property", "event_date", "time_slot", "event_type", "status", "customer_name"],
+        order_by="creation desc"
+    )
+
+@frappe.whitelist()
+def get_authorized_sales_orders(hotel_property=None):
+    from rental_platform.web_api.permission import validate_hotel_property_access, get_user_hotel_properties
+    
+    filters = {}
+    if hotel_property == "All Properties":
+        hotel_property = None
+        
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
+        filters["custom_hotel_property"] = hotel_property
+    else:
+        roles = frappe.get_roles(frappe.session.user)
+        if "System Manager" not in roles and "Hotel Administrator" not in roles:
+            permitted = get_user_hotel_properties(frappe.session.user)
+            if not permitted:
+                return []
+            filters["custom_hotel_property"] = ["in", permitted]
+            
+    return frappe.get_all(
+        "Sales Order",
+        filters=filters,
+        fields=["name", "customer", "transaction_date", "grand_total", "status"],
+        order_by="creation desc",
+        ignore_permissions=True
+    )
+
+@frappe.whitelist()
+def get_authorized_sales_invoices(hotel_property=None):
+    from rental_platform.web_api.permission import validate_hotel_property_access, get_user_hotel_properties
+    
+    filters = {}
+    if hotel_property == "All Properties":
+        hotel_property = None
+        
+    if hotel_property:
+        validate_hotel_property_access(hotel_property)
+        filters["custom_hotel_property"] = hotel_property
+    else:
+        roles = frappe.get_roles(frappe.session.user)
+        if "System Manager" not in roles and "Hotel Administrator" not in roles:
+            permitted = get_user_hotel_properties(frappe.session.user)
+            if not permitted:
+                return []
+            filters["custom_hotel_property"] = ["in", permitted]
+            
+    return frappe.get_all(
+        "Sales Invoice",
+        filters=filters,
+        fields=["name", "customer", "posting_date", "grand_total", "status", "outstanding_amount"],
+        order_by="creation desc",
+        ignore_permissions=True
+    )
+
+@frappe.whitelist()
 def create_consolidated_sales_invoice(booking_name):
     try:
         be = frappe.get_doc("Booking Entry", booking_name)
@@ -261,11 +413,14 @@ def create_consolidated_sales_invoice(booking_name):
                             "income_account": item.income_account
                         })
         
+        si.update_stock = 0
+        si.set_warehouse = ""
+        
         si.run_method("set_missing_values")
         si.run_method("calculate_taxes_and_totals")
         
         # Fetch advances
-        si.get_advances()
+        si.set_advances()
         
         si.insert(ignore_permissions=True)
         return {
